@@ -1,0 +1,4 @@
+test_station:
+  name: "Test Workstation"
+  icon: "CRAFTING_TABLE"
+  gui_layout: "WORKBENCH"

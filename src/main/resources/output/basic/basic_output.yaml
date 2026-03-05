@@ -1,0 +1,11 @@
+# The name of the item files (minus the .yaml) of the items that should be included in the items folder.
+# For multiple items in the same roll, use *(number) at the end (e.g. item1*3 for 3 of item1).
+# You can also just add the same item multiple times with different amounts without issue.
+output_items:
+  - "item1"
+  - "item2"
+
+# The strings that will show up on the item's "output" icon. Accepts MiniMessage Format
+output_strings:
+  - "string1"
+  - "string2"

@@ -1,0 +1,77 @@
+name: SkysongCrafting
+version: '1.1'
+main: org.skysongdev.skysongCrafting.SkysongCrafting
+api-version: '1.21'
+
+depend: [Skysong_Items]
+
+commands:
+  sc:
+    description: Main command for SkysongCrafting
+    usage: /<command>
+    aliases: [skysongcrafting, scraft, scrafting, skyc]
+
+permissions:
+  skysongcrafting.management.reload:
+    description: Allows reloading of SkysongCrafting configuration files
+    default: op
+  skysongcrafting.management.forceclose:
+    description: Allows force closing of all open inventories
+    default: op
+  skysongcrafting.management.*:
+    description: Gives access to all SkysongCrafting management commands
+    default: op
+    children:
+      skysongcrafting.management.reload: true
+      skysongcrafting.management.forceclose: true
+  skysongcrafting.workbench.create:
+    description: Allows creation of workbenches
+    default: op
+  skysongcrafting.workbench.delete:
+    description: Allows deletion of workbenches
+    default: op
+  skysongrafting.workbench.addmember:
+    description: Allows adding members to workbenches
+    default: op
+  skysongcrafting.workbench.addmember.others:
+    description: Allows adding other players as members to workbenches
+    default: op
+  skysongcrafting.workbench.removemember:
+    description: Allows removing members from workbenches
+    default: op
+  skysongcrafting.workbench.removemember.others:
+    description: Allows removing other players as members from workbenches
+    default: op
+  skysongcrafting.workbench.setowner:
+    description: Allows setting the owner of workbenches
+    default: op
+  skysongcrafting.workbench.setowner.others:
+    description: Allows setting other players as owners of workbenches
+    default: op
+  skysongcrafting.workbench.togglepublic:
+    description: Allows toggling workbenches between public and private
+    default: op
+  skysongcrafting.workbench.togglepublic.others:
+    description: Allows toggling other players' workbenches between public and private
+    default: op
+  skysongcrafting.workbench.*:
+    description: Gives access to all workbench management commands
+    default: op
+    children:
+      skysongcrafting.workbench.create: true
+      skysongcrafting.workbench.delete: true
+      skysongcrafting.workbench.addmember: true
+      skysongcrafting.workbench.addmember.others: true
+      skysongcrafting.workbench.removemember: true
+      skysongcrafting.workbench.removemember.others: true
+      skysongcrafting.workbench.setowner: true
+      skysongcrafting.workbench.setowner.others: true
+      skysongcrafting.workbench.togglepublic: true
+      skysongcrafting.workbench.togglepublic.others: true
+
+  skysongcrafting.*:
+    description: Gives access to all SkysongCrafting commands and features
+    default: op
+    children:
+      skysongcrafting.management.*: true
+      skysongcrafting.workbench.*: true

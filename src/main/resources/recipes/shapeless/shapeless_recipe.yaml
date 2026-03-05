@@ -1,0 +1,29 @@
+# Icon for the Recipe crafting icon
+icon: "RED_WOOL"
+
+# Type of recipe, can be either shaped or shapeless
+recipe_type: "SHAPELESS"
+
+# Craftsman table type the recipe was made for
+table_type: "craftsman"
+
+# Sound to play when crafting the item, use PaperMC's "sound" enums
+# https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Sound.html
+sound: "entity.villager.work_toolsmith"
+
+# Name of the recipe that shows up on the icon
+name: "Shaped Recipe"
+
+# Output of the recipe, must be formatted like "type:filename". Type must be the folder name.
+# Filename does not include the .yaml extension.
+output: "basic:basic_output"
+
+# Skill experience required to craft the item, format is "skill:amount"
+# This can be left empty if no skill is required.
+skill_requirements:
+  - "smithing:16"
+
+# Ingredients of the recipe in item names. For multiple of the same item, use *(number) at the end (e.g. item1*3 for 3 of item1).
+pattern:
+  - "item1"
+  - "item2*2"

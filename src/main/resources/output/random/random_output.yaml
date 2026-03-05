@@ -1,0 +1,22 @@
+# The name of the item files (minus the .yaml) of the items that should be included in the items folder.
+# For multiple items in the same roll, use *(number) at the end (e.g. item1*3 for 3 of item1).
+# You can also just add the same item multiple times with different amounts without issue.
+output_items:
+  - "item1"
+  - "item2"
+
+# The strings that will show up on the item's "output" icon. Accepts MiniMessage Format
+output_strings:
+  - "string1"
+  - "string2"
+
+# Ensure this adds up to 1.0 and should have the same amount of entries as output_items.
+# This is the chance that each corresponding item in output_items will be chosen.
+chances:
+  - 0.5
+  - 0.5
+
+# How many times the table will be rolled for results in one craft.
+# Rolls can match, but lower should not be larger than higher.
+rolls_lower_bound: 1
+rolls_upper_bound: 1
