@@ -4,5 +4,6 @@ public enum OutputType {
     BASIC,
     RANDOM,
     RANDOM_ID,
-    ID
+    ID,
+    COMPOSITE
 }

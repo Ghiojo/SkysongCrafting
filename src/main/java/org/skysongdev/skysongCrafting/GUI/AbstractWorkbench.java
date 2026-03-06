@@ -11,7 +11,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.recipe.ConditionalShapedRecipeInstance;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import org.skysongdev.skysongCrafting.events.CraftingEvent;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
@@ -92,6 +94,13 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             inventory.setItem(craftingButtonLocation, noSkillItem);
             return;
         }
+        if(foundRecipes.get(recipeIndex) instanceof ConditionalShapedRecipeInstance){
+            ConditionalShapedRecipeInstance conditionalRecipe = (ConditionalShapedRecipeInstance) foundRecipes.get(recipeIndex);
+            if(!conditionalRecipe.doesMeetConditions(inputSlotReferences, inventory)){
+                inventory.setItem(craftingButtonLocation, GUIUtils.Instance().GUI_CRAFT_CONDITIONS_NOT_MET_BUTTON);
+                return;
+            }
+        }
         if(!Objects.equals(foundRecipes.get(recipeIndex).getCraftingTableType(), type) || Objects.equals(foundRecipes.get(recipeIndex).getCraftingTableType(), "ANY")){
             inventory.setItem(craftingButtonLocation, GUIUtils.Instance().GUI_CRAFT_WRONG_WORKBENCH_BUTTON);
             return;
@@ -123,7 +132,7 @@ public abstract class AbstractWorkbench implements InventoryHolder {
         if(foundRecipes.isEmpty())
             return;
         Bukkit.getPluginManager().callEvent(new CraftingEvent(foundRecipes.get(recipeIndex), inputSlotReferences, outputSlotReferences, player, inventory));
-        ArrayList<ItemStack> markedItems = foundRecipes.get(recipeIndex).ConsumeMaterials(inputSlotReferences, inventory);
+        ArrayList<MarkedItem> markedItems = foundRecipes.get(recipeIndex).ConsumeMaterials(inputSlotReferences, inventory);
 
         for(SkysongItemWithAmmount skysongItem : foundRecipes.get(recipeIndex).getResults().getOutput(markedItems)){
             boolean added = false;

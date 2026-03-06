@@ -27,6 +27,7 @@ public class GUIUtils {
     public static ItemStack GUI_CRAFT_NONE_BUTTON;
     public static ItemStack GUI_CRAFT_NO_SKILL_BUTTON;
     public static ItemStack GUI_CRAFT_WRONG_WORKBENCH_BUTTON;
+    public static ItemStack GUI_CRAFT_CONDITIONS_NOT_MET_BUTTON;
     public static ItemStack GUI_NEXT_CRAFT_BUTTON;
     public static ItemStack GUI_PREVIOUS_CRAFT_BUTTON;
     //Key for GUI Items that shouldn't be interactable
@@ -85,6 +86,18 @@ public class GUIUtils {
 
         wrongWorkbenchButton.setItemMeta(meta);
         GUI_CRAFT_WRONG_WORKBENCH_BUTTON = wrongWorkbenchButton;
+
+        ItemStack conditionsNotMetButton = new ItemStack(org.bukkit.Material.YELLOW_STAINED_GLASS_PANE);
+        meta = conditionsNotMetButton.getItemMeta();
+        meta.displayName(SkysongCrafting.GetMM().deserialize("<yellow>Craft").decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
+        lore = new ArrayList<>();
+        lore.add(SkysongCrafting.GetMM().deserialize("<yellow>You do not meet the conditions to craft this!").decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
+        meta.lore(lore);
+        container = meta.getPersistentDataContainer();
+        container.set(NonSelectableKey, org.bukkit.persistence.PersistentDataType.BOOLEAN, true);
+
+        conditionsNotMetButton.setItemMeta(meta);
+        GUI_CRAFT_CONDITIONS_NOT_MET_BUTTON = conditionsNotMetButton;
 
         ItemStack nextCraftButton = new ItemStack(org.bukkit.Material.GREEN_STAINED_GLASS_PANE);
         meta = nextCraftButton.getItemMeta();

@@ -1,6 +1,7 @@
 package org.skysongdev.skysongCrafting.data.output;
 
 import org.bukkit.inventory.ItemStack;
+import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
 import org.skysongdev.skysongitems.utils.SkysongItem;
 
@@ -19,7 +20,7 @@ public class RandomOutput extends OutputInstance{
     }
 
     @Override
-    public ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<ItemStack> markedItems) {
+    public ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<MarkedItem> markedItems) {
         int rolls = (int) Math.floor(Math.random() * (upperBoundOfRolls - lowerBoundOfRolls + 1) + lowerBoundOfRolls);
         ArrayList<SkysongItemWithAmmount> finalOutput = new ArrayList<>();
         // Normalize chances so they sum to 1.0
