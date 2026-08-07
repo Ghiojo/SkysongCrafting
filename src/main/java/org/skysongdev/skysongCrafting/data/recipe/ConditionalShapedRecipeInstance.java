@@ -130,7 +130,7 @@ public class ConditionalShapedRecipeInstance extends ShapedMarkingRecipeInstance
                     Instance().getLogger().warning("Item in marked slot does not have required tag for recipe " + displayItem.getItemMeta().displayName() + "! Skipping condition check. (Type: " + type + ")");
                     return null;
                 }
-                return container.get(org.skysongdev.skysongitems.utils.Utils.getTag(modifier), org.skysongdev.skysongitems.utils.Utils.tagList.get(org.skysongdev.skysongitems.utils.Utils.getTag(modifier)));
+                return container.get(org.skysongdev.skysongitems.utils.Utils.getTag(modifier), org.skysongdev.skysongitems.utils.Constants.tagList.get(org.skysongdev.skysongitems.utils.Utils.getTag(modifier)));
             default:
                 Instance().getLogger().warning("Invalid condition type for recipe " + displayItem.getItemMeta().displayName() + "! Skipping condition check. (Type: " + type + ")");
         }

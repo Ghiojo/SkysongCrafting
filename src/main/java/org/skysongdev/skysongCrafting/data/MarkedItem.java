@@ -10,4 +10,12 @@ public class MarkedItem {
         this.index = index;
         this.itemStack = itemStack;
     }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public ItemStack getItemStack() {
+        return itemStack;
+    }
 }

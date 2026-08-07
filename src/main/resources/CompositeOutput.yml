@@ -1,0 +1,45 @@
+output_steps:
+  step1:
+    order: 1
+    step_type: "fetch"
+    fetch_type: "marked"
+    fetch_id: "fetch1"
+  step2:
+    order: 2
+    step_type: "tag"
+    operation: "modify"
+    tag_id: "tag1"
+    amounts:
+      - "amount1"
+      - "amount2"
+  step3:
+    order: 3
+    step_type: "property"
+    operation: "remove"
+    property_id: "property1"
+  step4:
+    order: 4
+    step_type: "cmd"
+    operation: "set"
+    type: "float"
+    amounts:
+      - "amount1"
+      - "amount2"
+    index: 0
+  step5:
+    order: 5
+    step_type: "cmd"
+    operation: "add"
+    type: "string"
+    amount: "amount1"
+  step6:
+    order: 6
+    step_type: "blend"
+    fetch_type1: "marked"
+    reference_1: "ref1"
+    fetch_type2: "generated"
+    reference_2: "ref2"
+  step7:
+    order: 7
+    step_type: "save"
+    amount: 1

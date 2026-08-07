@@ -8,6 +8,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
 import org.skysongdev.skysongitems.SkysongItems;
+import org.skysongdev.skysongitems.utils.Constants;
 import org.skysongdev.skysongstats.Utils.Utils;
 
 import java.util.ArrayList;
@@ -36,17 +37,17 @@ public class ShapedRecipeInstance extends RecipeInstance {
                 String symbol = matcher.group(1);
                 int number = Integer.parseInt(matcher.group(2));
                 if (symbol.equals("^")) {
-                    if(inventory.getItem(inputSlots.get(i)).getItemMeta().getPersistentDataContainer().has(SkysongItems.getPlugin().getUtils().chargesKey)){
-                        int charges = inventory.getItem(inputSlots.get(i)).getItemMeta().getPersistentDataContainer().get(SkysongItems.getPlugin().getUtils().chargesKey, PersistentDataType.INTEGER);
+                    if(inventory.getItem(inputSlots.get(i)).getItemMeta().getPersistentDataContainer().has(Constants.chargesKey)){
+                        int charges = inventory.getItem(inputSlots.get(i)).getItemMeta().getPersistentDataContainer().get(Constants.chargesKey, PersistentDataType.INTEGER);
                         ItemStack item = inventory.getItem(inputSlots.get(i));
                         ItemMeta meta = item.getItemMeta();
 
                         if(charges > number){
-                            meta.getPersistentDataContainer().set(SkysongItems.getPlugin().getUtils().chargesKey, PersistentDataType.INTEGER, charges - number);
+                            meta.getPersistentDataContainer().set(Constants.chargesKey, PersistentDataType.INTEGER, charges - number);
                             item.setItemMeta(meta);
                             inventory.setItem(inputSlots.get(i), item);
                         } else {
-                            meta.getPersistentDataContainer().set(SkysongItems.getPlugin().getUtils().chargesKey, PersistentDataType.INTEGER, 0);
+                            meta.getPersistentDataContainer().set(Constants.chargesKey, PersistentDataType.INTEGER, 0);
                             item.setItemMeta(meta);
                             inventory.setItem(inputSlots.get(i), item);
                         }
