@@ -41,7 +41,7 @@ public class PropertyStep extends OutputStep {
                         return newData;
                     }
                 }
-                properties = properties + ";" + propertyId;
+                properties = (properties == null || properties.isEmpty()) ? propertyId : properties + ";" + propertyId;
                 container.set(Constants.propertiesKey, PersistentDataType.STRING, properties);
                 break;
             case "remove":

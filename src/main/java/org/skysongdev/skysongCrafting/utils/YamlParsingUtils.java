@@ -77,18 +77,41 @@ public class YamlParsingUtils {
 
                 for(String stepKey : yaml.getConfigurationSection("output_steps").getKeys(false)){
                     String step_type = yaml.getString("output_steps." + stepKey + ".step_type", "NONE");
+                    int order;
                     switch (step_type.toUpperCase()){
+                        case "FETCH":
+                            String fetchTypeString = yaml.getString("output_steps." + stepKey + ".fetch_type", "NONE").toUpperCase();
+                            String idToFetch = yaml.getString("output_steps." + stepKey + ".id_to_fetch", "NONE");
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            FetchStep.FetchType fetchType;
+                            try{
+                                fetchType = FetchStep.FetchType.valueOf(fetchTypeString);
+                            } catch (IllegalArgumentException e){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid fetch type for FETCH step: " + fetchTypeString + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            unorganizedSteps.set(order, new FetchStep(idToFetch, fetchType));
+                            break;
                         case "TAG":
                             String operation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
                             String tagId = yaml.getString("output_steps." + stepKey + ".tag_id", "NONE");
                             ArrayList<String> amounts = new ArrayList<>(yaml.getStringList("output_steps." + stepKey + ".amounts"));
-                            int order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
                             unorganizedSteps.set(order ,new TagStep(operation, tagId, amounts));
                             break;
                         case "CMD":
                             String cmdOperation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
                             String amountTypeString = yaml.getString("output_steps." + stepKey + ".amount_type", "NONE").toUpperCase();
                             int index = yaml.getInt("output_steps." + stepKey + ".index", -1);
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
                             ArrayList<String> cmdAmounts = new ArrayList<>(yaml.getStringList("output_steps." + stepKey + ".amounts"));
                             AmountType amountType;
                             try{
@@ -97,28 +120,46 @@ public class YamlParsingUtils {
                                 SkysongCrafting.Instance().getLogger().warning("Invalid amount type for CMD step: " + amountTypeString + "! Skipping step. (File: " + file.getName() + ")");
                                 continue;
                             }
-                            unorganizedSteps.set(index, new CMDStep(cmdOperation, amountType, index));
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            unorganizedSteps.set(index, new CMDStep(cmdOperation, amountType, order, cmdAmounts));
                             break;
                         case "PROPERTY":
                             String propertyOperation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
-                            String property = yaml.getString("output_steps." + stepKey + ".property", "NONE");
-                            int propertyOrder = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            unorganizedSteps.set(propertyOrder, new PropertyStep(propertyOperation, property));
+                            String property = yaml.getString("output_steps." + stepKey + ".property_id", "NONE");
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            unorganizedSteps.set(order, new PropertyStep(propertyOperation, property));
                             break;
                         case "BLEND":
                             String referenceOne = yaml.getString("output_steps." + stepKey + ".reference_1", "NONE");
                             String referenceTwo = yaml.getString("output_steps." + stepKey + ".reference_2", "NONE");
-                            unorganizedSteps.set(yaml.getInt("output_steps." + stepKey + ".order", -1), new BlendStep(referenceOne, referenceTwo));
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            unorganizedSteps.set(order, new BlendStep(referenceOne, referenceTwo));
                             break;
                         case "SAVE":
                             int saveIndex = yaml.getInt("output_steps." + stepKey + ".index", -1);
-                            unorganizedSteps.set(saveIndex, new SaveStep(saveIndex));
+                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
+                            if(order < 0 || order >= unorganizedSteps.size()){
+                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
+                                continue;
+                            }
+                            unorganizedSteps.set(order, new SaveStep(saveIndex));
                             break;
                         default:
                             SkysongCrafting.Instance().getLogger().warning("Invalid step type: " + step_type + " in composite output! Skipping step. (File: " + file.getName() + ")");
                     }
                 }
-                return null;
+                return new CompositeOutput(itemStacks, outputStrings, unorganizedSteps);
             }
             default -> {
                 return null;

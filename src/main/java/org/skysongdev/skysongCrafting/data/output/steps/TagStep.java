@@ -81,18 +81,20 @@ public class TagStep extends OutputStep {
                         container.set(tagKey, tagType, (Float) currentValue + (Float) TypeCastingUtils.castObjectToType(tagType, finalAmount));
                     }
                 }
+                break;
             case "remove":
                 if(!container.has(tagKey, tagType)){
                     Instance().getLogger().warning("Item does not have tag to remove: " + tagId);
                     break;
                 }
                 container.remove(tagKey);
+                break;
         }
         item.setItemMeta(meta);
         newData.setPivotItem(item);
 
 
-        return null;
+        return newData;
     }
 
     @Override

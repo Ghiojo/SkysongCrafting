@@ -22,11 +22,12 @@ public class CMDStep extends OutputStep{
     int index;
     ArrayList<String> amounts;
 
-    public CMDStep(String operation, AmountType amountType, int index) {
+    public CMDStep(String operation, AmountType amountType, int index, ArrayList<String> amounts) {
         super();
         this.operation = operation;
         this.amountType = amountType;
         this.index = index;
+        this.amounts = amounts;
     }
 
     @Override
@@ -49,7 +50,13 @@ public class CMDStep extends OutputStep{
                 }
             }
         }
-        Object finalAmount = (amountType == AmountType.INTEGER || amountType == AmountType.FLOAT) ? numberAmount : amounts.get(0);
+        Object finalAmount;
+        switch(amountType){
+            case INTEGER -> finalAmount = Math.round(numberAmount);
+            case FLOAT -> finalAmount = numberAmount;
+            case BOOLEAN -> finalAmount = Boolean.parseBoolean(amounts.get(0));
+            default -> finalAmount = amounts.get(0); // STRING
+        }
         ArrayList currentCMD;
         switch(amountType){
             case INTEGER:

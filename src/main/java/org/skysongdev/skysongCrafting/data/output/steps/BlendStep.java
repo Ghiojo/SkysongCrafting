@@ -16,9 +16,7 @@ import java.io.File;
 import static org.skysongdev.skysongitems.SkysongItems.getPlugin;
 
 public class BlendStep extends OutputStep {
-    private FetchStep.FetchType fetchTypeOne;
     private String referenceOne;
-    private FetchStep.FetchType fetchTypeTwo;
     private String referenceTwo;
 
     public BlendStep(String referenceOne, String referenceTwo) {
@@ -31,8 +29,8 @@ public class BlendStep extends OutputStep {
     @Override
     public StepData executeStep(StepData stepData) {
         StepData returnData = stepData;
-        ItemStack itemOne = fetchReference(fetchTypeOne, referenceOne, stepData);
-        ItemStack itemTwo = fetchReference(fetchTypeTwo, referenceTwo, stepData);
+        ItemStack itemOne = fetchReference(referenceOne, stepData);
+        ItemStack itemTwo = fetchReference(referenceTwo, stepData);
         ItemMeta metaOne = itemOne.getItemMeta();
         ItemMeta metaTwo = itemTwo.getItemMeta();
 
@@ -50,35 +48,24 @@ public class BlendStep extends OutputStep {
         return returnData;
     }
 
-    private ItemStack fetchReference(FetchStep.FetchType type, String reference, StepData stepData) {
-        if(type == FetchStep.FetchType.GENERATED) {
-            File itemFile = Constants.ITEMS_PATH.resolve(reference + ".yml").toFile();
-            if(!itemFile.exists()) {
-                System.out.println("Item file not found for id: " + reference);
-                return null;
-            }
-            SkysongItem item = Utils.LoadSkysongItem(itemFile);
-            return getPlugin().getUtils().GenerateSkysongItem(item);
-        } else if(type == FetchStep.FetchType.MARKED) {
-            int index = 0;
-            try {
-                index = Integer.parseInt(reference);
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid id to fetch: " + reference);
-                return null;
-            }
-            if(index < 0 || index >= stepData.getMarkedItems().size()) {
-                System.out.println("Index out of bounds for marked items: " + index);
-                return null;
-            }
-            MarkedItem itemToFetch = stepData.getMarkedItems().get(index);
-            return itemToFetch.getItemStack();
+    private ItemStack fetchReference(String reference, StepData stepData) {
+        int index = 0;
+        try {
+            index = Integer.parseInt(reference);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid id to fetch: " + reference);
+            return null;
         }
-        return null;
+        if(index < 0 || index >= stepData.getMarkedItems().size()) {
+            System.out.println("Index out of bounds for marked items: " + index);
+            return null;
+        }
+        MarkedItem itemToFetch = stepData.getMarkedItems().get(index);
+        return itemToFetch.getItemStack();
     }
 
     @Override
     public boolean goToNextStep() {
-        return false;
+        return true;
     }
 }

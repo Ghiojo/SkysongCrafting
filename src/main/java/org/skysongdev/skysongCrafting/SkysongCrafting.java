@@ -100,13 +100,21 @@ public final class SkysongCrafting extends JavaPlugin {
         Utils.Instance().getShapedRecipeMap().clear();
         Utils.Instance().getShapelessRecipeMap().clear();
         for(File file : RECIPES_PATH.resolve("shaped").toFile().listFiles()){
-            YamlParsingUtils.initializeRecipeInstance(file);
+            loadRecipeFileSafely(file);
         }
         for(File file : RECIPES_PATH.resolve("shapeless").toFile().listFiles()){
-            YamlParsingUtils.initializeRecipeInstance(file);
+            loadRecipeFileSafely(file);
         }
         for(File file : RECIPES_PATH.resolve("smelting").toFile().listFiles()){
+            loadRecipeFileSafely(file);
+        }
+    }
+
+    private void loadRecipeFileSafely(File file){
+        try {
             YamlParsingUtils.initializeRecipeInstance(file);
+        } catch (Exception e) {
+            getLogger().warning("Failed to load recipe file '" + file.getName() + "': " + e);
         }
     }
 
