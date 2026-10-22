@@ -31,6 +31,10 @@ public class SaveStep extends OutputStep {
         this.amount = amount;
     }
 
+    public int getAmount() {
+        return amount;
+    }
+
     @Override
     public String getType() {
         return "save";

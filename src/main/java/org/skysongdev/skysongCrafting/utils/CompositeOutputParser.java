@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Reads the {@code steps} list of a composite output file into {@link OutputStep}s.
@@ -28,9 +29,16 @@ public final class CompositeOutputParser {
 
     public static CompositeOutput parse(File file, YamlConfiguration yaml,
                                         ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings) {
+        return parse(file, yaml, outputItems, outputStrings, message -> SkysongCrafting.Instance().getLogger().warning(message));
+    }
+
+    /** Same as {@link #parse(File, YamlConfiguration, ArrayList, ArrayList)} with an explicit warning sink (used by tests). */
+    public static CompositeOutput parse(File file, YamlConfiguration yaml,
+                                        ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings,
+                                        Consumer<String> warnings) {
         List<Map<?, ?>> rawSteps = yaml.getMapList("steps");
         if (rawSteps.isEmpty()) {
-            warn(file, "has no 'steps' list" + (yaml.contains("output_steps") ? " (found the old 'output_steps' map; see docs/COMPOSITE_FORMAT.md)" : ""));
+            warn(warnings, file, "has no 'steps' list" + (yaml.contains("output_steps") ? " (found the old 'output_steps' map; see docs/COMPOSITE_FORMAT.md)" : ""));
             return null;
         }
 
@@ -43,12 +51,12 @@ public final class CompositeOutputParser {
                 if (step instanceof SaveStep) hasSave = true;
                 steps.add(step);
             } catch (ParseException e) {
-                warn(file, "step " + (i + 1) + ": " + e.getMessage() + ". Output not loaded.");
+                warn(warnings, file, "step " + (i + 1) + ": " + e.getMessage() + ". Output not loaded.");
                 return null;
             }
         }
         if (!hasSave) {
-            warn(file, "has no 'save' step, so it would never produce an item. Output not loaded.");
+            warn(warnings, file, "has no 'save' step, so it would never produce an item. Output not loaded.");
             return null;
         }
         return new CompositeOutput(outputItems, outputStrings, steps);
@@ -163,7 +171,7 @@ public final class CompositeOutputParser {
         return result;
     }
 
-    private static void warn(File file, String message) {
-        SkysongCrafting.Instance().getLogger().warning("Composite output '" + file.getName() + "' " + message);
+    private static void warn(Consumer<String> warnings, File file, String message) {
+        warnings.accept("Composite output '" + file.getName() + "' " + message);
     }
 }

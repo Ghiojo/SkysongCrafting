@@ -57,9 +57,12 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
 
 ### Remaining in milestone 1
 - Owner: add `libs/SkysongSpecialItems-1.8.0.jar` (clean clone does not compile without it).
-- Owner: build, test each step type in-game, report.
-- Fix the shapeless example (`pattern` → `inputs`) and other example files (subagent task).
-- Unit tests for pure logic — pending approval of JUnit 5.
+- Owner: build (`gradlew build`), run tests, test each step type in-game, report.
+- (done) Example files fixed (`inputs` in shapeless/smelting, names, sounds); `shaped_marking_recipe.yaml` added.
+- (done) `marking_pattern` accepts 5x5 rows like `pattern`, or a flat list.
+- (done) JUnit 5 added; tests for `CompositeOutputParser`, `MaterialCount`/`inputToMaterialCountList`,
+  `readMarkingPattern`. Run with `gradlew test`; `gradlew build -x test` skips them.
+  Item/step logic needs a server (or MockBukkit) and is not unit-tested.
 
 ## Milestone 2 — recipe side + corrections (planned)
 - Conditional recipes loadable from YAML (`conditions:` on marking recipes), indexed by marked
@@ -72,5 +75,4 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
 ## Milestone 3 — Paper 1.21.11.
 
 ## Open questions for the owner
-- JUnit 5 as a test dependency: yes / defer?
 - Shapeless conditional recipes wanted?

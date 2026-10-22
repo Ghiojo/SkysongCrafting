@@ -1,0 +1,30 @@
+# Example of a MARKING recipe: a shaped recipe that also tells the output which inputs matter.
+# Marked inputs are handed to composite outputs as "marked:0", "marked:1", ... in grid order
+# (top-left to bottom-right, counting only the marked slots). See docs/COMPOSITE_FORMAT.md.
+
+icon: "SHIELD"
+recipe_type: "SHAPED_MARKING"
+table_type: "craftsman"
+sound: "entity.villager.work_leatherworker"
+name: "Add a layer"
+
+# This output edits marked item 0 using data from marked item 1.
+output: "composite:composite_output"
+
+skill_requirements: []
+
+# 5x5 grid of material_id values ("" = empty). Here: a shield in the centre, a dye below it.
+pattern:
+  - [ "","","","","" ]
+  - [ "","","","","" ]
+  - [ "","","pavise_shield","","" ]
+  - [ "","","dye","","" ]
+  - [ "","","","","" ]
+
+# Same 5x5 grid: true marks the slot (a flat list of 25 values also works). The shield becomes marked:0, the dye marked:1.
+marking_pattern:
+  - [ false,false,false,false,false ]
+  - [ false,false,false,false,false ]
+  - [ false,false,true,false,false ]
+  - [ false,false,true,false,false ]
+  - [ false,false,false,false,false ]

@@ -182,7 +182,7 @@ public class YamlParsingUtils {
                 }
                 return;
             case "SHAPED_MARKING":
-                ArrayList<Boolean> markingPattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getBooleanList("marking_pattern"));
+                ArrayList<Boolean> markingPattern = readMarkingPattern(YamlConfiguration.loadConfiguration(file));
                 pattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getList("pattern"));
                 pattern1D = new ArrayList<>();
                 for(Object row : pattern){
@@ -204,7 +204,7 @@ public class YamlParsingUtils {
                 }
                 return;
             case "SHAPELESS_MARKING":
-                markingPattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getBooleanList("marking_pattern"));
+                markingPattern = readMarkingPattern(YamlConfiguration.loadConfiguration(file));
                 inputs = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getStringList("inputs"));
 
                 combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(inputs);
@@ -230,6 +230,24 @@ public class YamlParsingUtils {
             default:
                 return;
         }
+    }
+
+    /**
+     * Reads {@code marking_pattern} either as a flat list of booleans or, like {@code pattern},
+     * as a list of rows; rows are flattened in order.
+     */
+    static ArrayList<Boolean> readMarkingPattern(YamlConfiguration yaml){
+        ArrayList<Boolean> marks = new ArrayList<>();
+        List<?> raw = yaml.getList("marking_pattern");
+        if(raw == null) return marks;
+        for(Object entry : raw){
+            if(entry instanceof List<?> row){
+                for(Object cell : row) marks.add(Boolean.TRUE.equals(cell) || "true".equalsIgnoreCase(String.valueOf(cell)));
+            } else {
+                marks.add(Boolean.TRUE.equals(entry) || "true".equalsIgnoreCase(String.valueOf(entry)));
+            }
+        }
+        return marks;
     }
 
     public static void initializeWorkbenches(){

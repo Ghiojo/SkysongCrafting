@@ -1,7 +1,7 @@
 # Icon for the Recipe crafting icon
 icon: "RED_WOOL"
 
-# Type of recipe, can be either shaped or shapeless
+# Type of recipe: SHAPED, SHAPELESS, SHAPED_MARKING or SHAPELESS_MARKING
 recipe_type: "SHAPED"
 
 # Craftsman table type the recipe was made for
@@ -23,7 +23,7 @@ skill_requirements:
   - "smithing:16"
 
 # Ingredients of the recipe in a 5x5 grid, use "" for empty slots.
-# The strings in each slot is based on the SkysongItems material_id tags.
+# The strings in each slot are the SkysongItems material_id of the required item. Use "#tag_id" to accept any item of a tag.
 pattern:
   - [ "","","","","" ]
   - [ "","","","","" ]
