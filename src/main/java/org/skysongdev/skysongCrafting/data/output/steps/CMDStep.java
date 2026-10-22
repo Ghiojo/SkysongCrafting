@@ -4,125 +4,140 @@ import org.bukkit.Color;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
-import org.bukkit.persistence.PersistentDataType;
-import org.skysongdev.skysongCrafting.data.output.CompositeOutput;
-import org.skysongdev.skysongCrafting.data.output.data.AmountType;
+import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.data.output.utils.PlaceholderParser;
-import org.skysongdev.skysongCrafting.utils.TypeCastingUtils;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import static org.skysongdev.skysongCrafting.SkysongCrafting.Instance;
-import static org.skysongdev.skysongCrafting.utils.Constants.AMOUNT_TYPE_MAP;
+/**
+ * Edits one of the four custom model data lists of the pivot item.
+ * <pre>
+ *   - type: cmd
+ *     cmd_type: float | string | boolean | color
+ *     operation: set | add | remove
+ *     index: 2                                  # set/remove: required. add: optional (append when absent)
+ *     values: ["marked:1;tag:dye_color"]        # set/add only; floats sum all values, others take the first
+ * </pre>
+ * {@code index} and every value may be a placeholder, e.g. {@code index: "marked:0;tag:layer_count"}.
+ * Colours accept {@code R,G,B}, {@code #RRGGBB} or an RGB integer (what colour tags store).
+ */
+public class CMDStep extends OutputStep {
+    public enum CmdType { FLOAT, STRING, BOOLEAN, COLOR }
+    public enum Operation { SET, ADD, REMOVE }
 
-public class CMDStep extends OutputStep{
-    String operation;
-    AmountType amountType;
-    int index;
-    ArrayList<String> amounts;
+    private final CmdType cmdType;
+    private final Operation operation;
+    private final String index;      // null = none given
+    private final List<String> values;
 
-    public CMDStep(String operation, AmountType amountType, int index, ArrayList<String> amounts) {
-        super();
+    public CMDStep(CmdType cmdType, Operation operation, String index, List<String> values) {
+        this.cmdType = cmdType;
         this.operation = operation;
-        this.amountType = amountType;
         this.index = index;
-        this.amounts = amounts;
+        this.values = values;
     }
 
     @Override
-    public StepData executeStep(StepData stepData) {
-        StepData newData = stepData;
-        ItemStack item = stepData.getPivotItem();
-        ItemMeta meta = item.getItemMeta();
-        CustomModelDataComponent cmdComponent = meta.getCustomModelDataComponent();
+    public String getType() {
+        return "cmd";
+    }
 
-        float numberAmount = 0;
-        if(amountType == AmountType.INTEGER || amountType == AmountType.FLOAT){
-            for(String amount : amounts){
-                String parsedAmount = PlaceholderParser.parsePlaceholder(amount, stepData);
-                try{
-                    numberAmount += Float.parseFloat(parsedAmount);
-                } catch (NumberFormatException e){
-                    Instance().getLogger().warning("Invalid number format for tag amount: " + parsedAmount);
-                    this.doesGoToNextStep = false;
-                    return newData;
-                }
+    @Override
+    public StepData execute(StepData stepData) throws OutputException {
+        ItemStack item = requirePivot(stepData);
+        ItemMeta meta = item.getItemMeta();
+        CustomModelDataComponent cmd = meta.getCustomModelDataComponent();
+
+        switch (cmdType) {
+            case FLOAT: {
+                List<Float> list = new ArrayList<>(cmd.getFloats());
+                apply(list, stepData, () -> {
+                    float sum = 0;
+                    for (String v : requireValues()) sum += PlaceholderParser.resolveFloat(v, stepData, "float value");
+                    return sum;
+                });
+                cmd.setFloats(list);
+                break;
+            }
+            case STRING: {
+                List<String> list = new ArrayList<>(cmd.getStrings());
+                apply(list, stepData, () -> PlaceholderParser.resolve(requireValues().get(0), stepData));
+                cmd.setStrings(list);
+                break;
+            }
+            case BOOLEAN: {
+                List<Boolean> list = new ArrayList<>(cmd.getFlags());
+                apply(list, stepData, () -> PlaceholderParser.resolveBoolean(requireValues().get(0), stepData, "boolean value"));
+                cmd.setFlags(list);
+                break;
+            }
+            case COLOR: {
+                List<Color> list = new ArrayList<>(cmd.getColors());
+                apply(list, stepData, () -> PlaceholderParser.resolveColor(requireValues().get(0), stepData, "color value"));
+                cmd.setColors(list);
+                break;
             }
         }
-        Object finalAmount;
-        switch(amountType){
-            case INTEGER -> finalAmount = Math.round(numberAmount);
-            case FLOAT -> finalAmount = numberAmount;
-            case BOOLEAN -> finalAmount = Boolean.parseBoolean(amounts.get(0));
-            default -> finalAmount = amounts.get(0); // STRING
-        }
-        ArrayList currentCMD;
-        switch(amountType){
-            case INTEGER:
-                currentCMD = new ArrayList<Color>(cmdComponent.getColors());
-                break;
-            case FLOAT:
-                currentCMD = new ArrayList<Float>(cmdComponent.getFloats());
-                break;
-            case STRING:
-                currentCMD = new ArrayList<String>(cmdComponent.getStrings());
-                break;
-            case BOOLEAN:
-                currentCMD = new ArrayList<Boolean>(cmdComponent.getFlags());
-                break;
-            default:
-                Instance().getLogger().warning("Invalid amount type: " + amountType);
-                this.doesGoToNextStep = false;
-                return newData;
-        }
 
-        switch(operation){
-            case "set":
-                if(index < 0 || index >= currentCMD.size()){
-                    Instance().getLogger().warning("Invalid index for setting custom model data: " + index);
-                    this.doesGoToNextStep = false;
-                    return newData;
-                }
-                currentCMD.set(index, AMOUNT_TYPE_MAP.get(amountType).cast(finalAmount));
-                break;
-            case "add":
-                currentCMD.add(AMOUNT_TYPE_MAP.get(amountType).cast(finalAmount));
-                break;
-            case "remove":
-                if(index < 0 || index >= currentCMD.size()){
-                    Instance().getLogger().warning("Invalid index for removing from custom model data: " + index);
-                    this.doesGoToNextStep = false;
-                    return newData;
-                }
-                currentCMD.remove(index);
-                break;
-        }
-
-        switch(amountType){
-            case INTEGER:
-                cmdComponent.setColors((ArrayList<Color>) currentCMD);
-                break;
-            case FLOAT:
-                cmdComponent.setFloats((ArrayList<Float>) currentCMD);
-                break;
-            case STRING:
-                cmdComponent.setStrings((ArrayList<String>) currentCMD);
-                break;
-            case BOOLEAN:
-                cmdComponent.setFlags((ArrayList<Boolean>) currentCMD);
-                break;
-        }
-
-        meta.setCustomModelDataComponent(cmdComponent);
+        meta.setCustomModelDataComponent(cmd);
         item.setItemMeta(meta);
-        newData.setPivotItem(item);
-
-        return newData;
+        stepData.setPivotItem(item);
+        return stepData;
     }
 
-    @Override
-    public boolean goToNextStep() {
-        return doesGoToNextStep;
+    private interface ValueSupplier<T> {
+        T get() throws OutputException;
+    }
+
+    private <T> void apply(List<T> list, StepData stepData, ValueSupplier<T> value) throws OutputException {
+        String listName = cmdType.name().toLowerCase() + " list";
+        switch (operation) {
+            case SET: {
+                int i = requireIndex(stepData);
+                checkIndex(i, list.size(), listName);
+                list.set(i, value.get());
+                break;
+            }
+            case ADD: {
+                if (index == null) {
+                    list.add(value.get());
+                } else {
+                    int i = PlaceholderParser.resolveInt(index, stepData, "index");
+                    if (i < 0 || i > list.size()) {
+                        throw new OutputException("cannot insert at index " + i + " (" + listName + " has " + list.size() + " entries)");
+                    }
+                    list.add(i, value.get());
+                }
+                break;
+            }
+            case REMOVE: {
+                int i = requireIndex(stepData);
+                checkIndex(i, list.size(), listName);
+                list.remove(i);
+                break;
+            }
+        }
+    }
+
+    private int requireIndex(StepData stepData) throws OutputException {
+        if (index == null) {
+            throw new OutputException("'" + operation.name().toLowerCase() + "' needs an 'index'");
+        }
+        return PlaceholderParser.resolveInt(index, stepData, "index");
+    }
+
+    private List<String> requireValues() throws OutputException {
+        if (values == null || values.isEmpty()) {
+            throw new OutputException("'" + operation.name().toLowerCase() + "' needs at least one entry in 'values'");
+        }
+        return values;
+    }
+
+    private static void checkIndex(int i, int size, String listName) throws OutputException {
+        if (i < 0 || i >= size) {
+            throw new OutputException("index " + i + " is out of range (" + listName + " has " + size + " entries)");
+        }
     }
 }

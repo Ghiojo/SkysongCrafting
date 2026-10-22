@@ -5,100 +5,103 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.skysongdev.skysongCrafting.data.output.CompositeOutput;
+import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.data.output.utils.PlaceholderParser;
-import org.skysongdev.skysongCrafting.utils.Constants;
-import org.skysongdev.skysongCrafting.utils.TypeCastingUtils;
+import org.skysongdev.skysongitems.utils.Constants;
 import org.skysongdev.skysongitems.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
 
-import static org.skysongdev.skysongCrafting.SkysongCrafting.Instance;
-
+/**
+ * Edits a SkysongItems tag on the pivot item.
+ * <pre>
+ *   - type: tag
+ *     operation: set | add | remove
+ *     tag_id: layer_count
+ *     values: ["1"]                       # set/add only; numeric tags sum all values, others take the first
+ * </pre>
+ * Values may be placeholders, e.g. {@code "marked:1;tag:dye_color"}.
+ */
 public class TagStep extends OutputStep {
-    String operation;
-    String tagId;
-    ArrayList<String> amounts;
+    public enum Operation { SET, ADD, REMOVE }
 
-    public TagStep(String operation, String tagId, ArrayList<String> amounts) {
-        super();
+    private final Operation operation;
+    private final String tagId;
+    private final List<String> values;
+
+    public TagStep(Operation operation, String tagId, List<String> values) {
         this.operation = operation;
         this.tagId = tagId;
-        this.amounts = amounts;
+        this.values = values;
     }
 
     @Override
-    public StepData executeStep(StepData stepData) {
-        StepData newData = stepData;
-        if(!Utils.isATag(tagId)){
-            Instance().getLogger().warning("Invalid tag: " + tagId);
-            this.doesGoToNextStep = false;
-            return newData;
+    public String getType() {
+        return "tag";
+    }
+
+    @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public StepData execute(StepData stepData) throws OutputException {
+        if (!Utils.isATag(tagId)) {
+            throw new OutputException("'" + tagId + "' is not a tag registered in SkysongItems");
         }
-        ItemStack item = stepData.getPivotItem();
+        NamespacedKey key = Utils.getTag(tagId);
+        PersistentDataType type = Constants.tagList.get(key);
+
+        ItemStack item = requirePivot(stepData);
         ItemMeta meta = item.getItemMeta();
         PersistentDataContainer container = meta.getPersistentDataContainer();
 
-        NamespacedKey tagKey = Utils.getTag(tagId);
-        PersistentDataType tagType = org.skysongdev.skysongitems.utils.Constants.tagList.get(tagKey);
-
-        float numberAmount = 0;
-        if(tagType == PersistentDataType.INTEGER || tagType == PersistentDataType.FLOAT){
-            for(String amount : amounts){
-                String parsedAmount = PlaceholderParser.parsePlaceholder(amount, stepData);
-                try{
-                    numberAmount += Float.parseFloat(parsedAmount);
-                } catch (NumberFormatException e){
-                    Instance().getLogger().warning("Invalid number format for tag amount: " + parsedAmount);
-                    this.doesGoToNextStep = false;
-                    return newData;
+        switch (operation) {
+            case REMOVE:
+                if (!container.has(key)) {
+                    throw new OutputException("item has no '" + tagId + "' tag to remove");
                 }
+                container.remove(key);
+                break;
+            case SET:
+                container.set(key, type, resolveValue(type, stepData));
+                break;
+            case ADD: {
+                if (type != PersistentDataType.INTEGER && type != PersistentDataType.FLOAT) {
+                    throw new OutputException("'add' only works on number tags; '" + tagId + "' is not a number tag (use 'set')");
+                }
+                Object delta = resolveValue(type, stepData);
+                if (!container.has(key, type)) {
+                    container.set(key, type, delta);
+                } else if (type == PersistentDataType.INTEGER) {
+                    container.set(key, type, container.get(key, PersistentDataType.INTEGER) + (Integer) delta);
+                } else {
+                    container.set(key, type, container.get(key, PersistentDataType.FLOAT) + (Float) delta);
+                }
+                break;
             }
         }
-
-        Object finalAmount = (tagType == PersistentDataType.INTEGER || tagType == PersistentDataType.FLOAT) ? numberAmount : amounts.get(0);
-
-        switch(operation){
-            case "set":
-                container.set(tagKey, tagType, TypeCastingUtils.castObjectToType(tagType, finalAmount));
-                break;
-            case "add":
-                if(tagType == PersistentDataType.STRING || tagType == PersistentDataType.BOOLEAN){
-                    Instance().getLogger().warning("Cannot add to a tag of type STRING or BOOLEAN: " + tagId);
-                    this.doesGoToNextStep = false;
-                    return newData;
-                }
-                if(!container.has(tagKey, tagType)){
-                    container.set(tagKey, tagType, TypeCastingUtils.castObjectToType(tagType, finalAmount));
-                } else {
-                    Object currentValue = container.get(tagKey, tagType);
-                    if(currentValue instanceof Integer){
-                        container.set(tagKey, tagType, (Integer) currentValue + (Integer) TypeCastingUtils.castObjectToType(tagType, finalAmount));
-                    } else if(currentValue instanceof Float){
-                        container.set(tagKey, tagType, (Float) currentValue + (Float) TypeCastingUtils.castObjectToType(tagType, finalAmount));
-                    }
-                }
-                break;
-            case "remove":
-                if(!container.has(tagKey, tagType)){
-                    Instance().getLogger().warning("Item does not have tag to remove: " + tagId);
-                    break;
-                }
-                container.remove(tagKey);
-                break;
-        }
         item.setItemMeta(meta);
-        newData.setPivotItem(item);
-
-
-        return newData;
+        stepData.setPivotItem(item);
+        return stepData;
     }
 
-    @Override
-    public boolean goToNextStep() {
-        return doesGoToNextStep;
+    /** Converts the configured values into the tag's own type. */
+    private Object resolveValue(PersistentDataType<?, ?> type, StepData stepData) throws OutputException {
+        if (values == null || values.isEmpty()) {
+            throw new OutputException("'" + operation.name().toLowerCase() + "' on tag '" + tagId + "' needs at least one entry in 'values'");
+        }
+        if (type == PersistentDataType.INTEGER || type == PersistentDataType.FLOAT) {
+            float sum = 0;
+            for (String value : values) {
+                sum += PlaceholderParser.resolveFloat(value, stepData, "value for tag '" + tagId + "'");
+            }
+            return type == PersistentDataType.INTEGER ? (Object) Math.round(sum) : (Object) sum;
+        }
+        if (type == PersistentDataType.BOOLEAN) {
+            return PlaceholderParser.resolveBoolean(values.get(0), stepData, "value for tag '" + tagId + "'");
+        }
+        if (type == PersistentDataType.STRING) {
+            return PlaceholderParser.resolve(values.get(0), stepData);
+        }
+        throw new OutputException("tag '" + tagId + "' has a type this step cannot edit (" + type + ")");
     }
 }

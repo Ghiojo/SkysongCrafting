@@ -79,5 +79,14 @@ public abstract class RecipeInstance {
         return skillRequirements;
     }
 
-    public abstract ArrayList<MarkedItem> ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory);
+    /**
+     * Returns copies of the marked inputs, numbered 0..n-1 in grid order, for the output to read.
+     * Called before anything is consumed; must not modify the inventory. Non-marking recipes return an empty list.
+     */
+    public ArrayList<MarkedItem> collectMarkedItems(ArrayList<Integer> inputSlots, Inventory inventory) {
+        return new ArrayList<>();
+    }
+
+    /** Removes the consumed materials from the grid. Only called once the output has been produced successfully. */
+    public abstract void ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory);
 }

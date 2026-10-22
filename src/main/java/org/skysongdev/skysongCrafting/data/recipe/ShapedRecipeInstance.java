@@ -27,7 +27,7 @@ public class ShapedRecipeInstance extends RecipeInstance {
     }
 
     @Override
-    public ArrayList<MarkedItem> ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory) {
+    public void ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory) {
         Pattern pattern = Pattern.compile("([\\^])([0-9]+)");
         for(int i = 0; i < materialConsumption.size();  i++){
             if(Objects.equals(materialConsumption.get(i), "")) continue;
@@ -67,7 +67,6 @@ public class ShapedRecipeInstance extends RecipeInstance {
                 }
             }
         }
-        return null;
     }
 
 }

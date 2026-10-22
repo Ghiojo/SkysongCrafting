@@ -2,14 +2,12 @@ package org.skysongdev.skysongCrafting.utils;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.inventory.InventoryAction;
-import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
-import org.skysongdev.skysongCrafting.data.output.data.AmountType;
 import org.skysongdev.skysongitems.SkysongItems;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Map;
 
 import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
 
@@ -44,19 +42,20 @@ public abstract class Constants {
         add(InventoryAction.MOVE_TO_OTHER_INVENTORY);
     }};
 
-    public static final String COMPOSITE_REFERENCE_PATTERN = "([^:;]+)(?::([^;:]+))?;([^:;]+):([^:;]+)(?::([^;:]+))?";
+    /**
+     * Finds a YAML file by base name in {@code directory}, accepting both {@code .yml} and {@code .yaml}.
+     * Returns {@code null} if neither exists.
+     */
+    public static File resolveYamlFile(Path directory, String baseName) {
+        File yml = directory.resolve(baseName + ".yml").toFile();
+        if (yml.isFile()) return yml;
+        File yaml = directory.resolve(baseName + ".yaml").toFile();
+        if (yaml.isFile()) return yaml;
+        return null;
+    }
 
-    public static final Map<PersistentDataType<?,?>, Class<?>> TYPE_MAP = Map.of(
-            PersistentDataType.INTEGER, Integer.class,
-            PersistentDataType.FLOAT, Float.class,
-            PersistentDataType.STRING, String.class,
-            PersistentDataType.BOOLEAN, Boolean.class
-    );
-
-    public static final Map<AmountType, Class<?>> AMOUNT_TYPE_MAP = Map.of(
-            AmountType.INTEGER, Integer.class,
-            AmountType.FLOAT, Float.class,
-            AmountType.STRING, String.class,
-            AmountType.BOOLEAN, Boolean.class
-    );
+    /** Finds a SkysongItem file in the items folder by name (without extension). */
+    public static File resolveItemFile(String itemId) {
+        return resolveYamlFile(ITEMS_PATH, itemId);
+    }
 }

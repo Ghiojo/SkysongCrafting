@@ -8,8 +8,6 @@ import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MaterialCount;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
 import org.skysongdev.skysongCrafting.data.output.*;
-import org.skysongdev.skysongCrafting.data.output.data.AmountType;
-import org.skysongdev.skysongCrafting.data.output.steps.*;
 import org.skysongdev.skysongCrafting.data.recipe.*;
 import org.skysongdev.skysongCrafting.data.workstations.Workstation;
 import org.skysongdev.skysongitems.utils.Utils;
@@ -38,20 +36,22 @@ public class YamlParsingUtils {
             if(matcher.find()){
                 int number = Integer.parseInt(matcher.group(2));
                 itemID = itemID.replace(matcher.group(0), "");
-                if(!ITEMS_PATH.resolve(itemID + ".yml").toFile().exists()){
+                File itemFile = resolveItemFile(itemID);
+                if(itemFile == null){
                     SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
                     continue;
                 }
-                SkysongItemWithAmmount item = new SkysongItemWithAmmount(Utils.LoadSkysongItem(ITEMS_PATH.resolve(itemID + ".yml").toFile()), number);
+                SkysongItemWithAmmount item = new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), number);
                 Bukkit.getLogger().info("Loading output item: " + itemID + " with amount " + number);
                 itemStacks.add(item);
             } else {
-                if(!ITEMS_PATH.resolve(itemID + ".yml").toFile().exists()){
+                File itemFile = resolveItemFile(itemID);
+                if(itemFile == null){
                     SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
                     continue;
                 }
                 Bukkit.getLogger().info("Loading output item: " + itemID);
-                itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(ITEMS_PATH.resolve(itemID + ".yml").toFile()), 1));
+                itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), 1));
             }
 
         }
@@ -71,95 +71,7 @@ public class YamlParsingUtils {
                 return new RandomIdOutput(itemStacks, outputStrings, idTypeString);
             }
             case COMPOSITE -> {
-                //Iterate through each key in the "output_steps" key.
-
-                ArrayList<OutputStep> unorganizedSteps = new ArrayList<>(Collections.nCopies(yaml.getConfigurationSection("output_steps").getKeys(false).size(), null));
-
-                for(String stepKey : yaml.getConfigurationSection("output_steps").getKeys(false)){
-                    String step_type = yaml.getString("output_steps." + stepKey + ".step_type", "NONE");
-                    int order;
-                    switch (step_type.toUpperCase()){
-                        case "FETCH":
-                            String fetchTypeString = yaml.getString("output_steps." + stepKey + ".fetch_type", "NONE").toUpperCase();
-                            String idToFetch = yaml.getString("output_steps." + stepKey + ".id_to_fetch", "NONE");
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            FetchStep.FetchType fetchType;
-                            try{
-                                fetchType = FetchStep.FetchType.valueOf(fetchTypeString);
-                            } catch (IllegalArgumentException e){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid fetch type for FETCH step: " + fetchTypeString + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(order, new FetchStep(idToFetch, fetchType));
-                            break;
-                        case "TAG":
-                            String operation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
-                            String tagId = yaml.getString("output_steps." + stepKey + ".tag_id", "NONE");
-                            ArrayList<String> amounts = new ArrayList<>(yaml.getStringList("output_steps." + stepKey + ".amounts"));
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(order ,new TagStep(operation, tagId, amounts));
-                            break;
-                        case "CMD":
-                            String cmdOperation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
-                            String amountTypeString = yaml.getString("output_steps." + stepKey + ".amount_type", "NONE").toUpperCase();
-                            int index = yaml.getInt("output_steps." + stepKey + ".index", -1);
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            ArrayList<String> cmdAmounts = new ArrayList<>(yaml.getStringList("output_steps." + stepKey + ".amounts"));
-                            AmountType amountType;
-                            try{
-                                amountType = AmountType.valueOf(amountTypeString);
-                            } catch (IllegalArgumentException e){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid amount type for CMD step: " + amountTypeString + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(index, new CMDStep(cmdOperation, amountType, order, cmdAmounts));
-                            break;
-                        case "PROPERTY":
-                            String propertyOperation = yaml.getString("output_steps." + stepKey + ".operation", "NONE");
-                            String property = yaml.getString("output_steps." + stepKey + ".property_id", "NONE");
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(order, new PropertyStep(propertyOperation, property));
-                            break;
-                        case "BLEND":
-                            String referenceOne = yaml.getString("output_steps." + stepKey + ".reference_1", "NONE");
-                            String referenceTwo = yaml.getString("output_steps." + stepKey + ".reference_2", "NONE");
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(order, new BlendStep(referenceOne, referenceTwo));
-                            break;
-                        case "SAVE":
-                            int saveIndex = yaml.getInt("output_steps." + stepKey + ".index", -1);
-                            order = yaml.getInt("output_steps." + stepKey + ".order", -1);
-                            if(order < 0 || order >= unorganizedSteps.size()){
-                                SkysongCrafting.Instance().getLogger().warning("Invalid order for TAG step: " + order + "! Skipping step. (File: " + file.getName() + ")");
-                                continue;
-                            }
-                            unorganizedSteps.set(order, new SaveStep(saveIndex));
-                            break;
-                        default:
-                            SkysongCrafting.Instance().getLogger().warning("Invalid step type: " + step_type + " in composite output! Skipping step. (File: " + file.getName() + ")");
-                    }
-                }
-                return new CompositeOutput(itemStacks, outputStrings, unorganizedSteps);
+                return CompositeOutputParser.parse(file, yaml, itemStacks, outputStrings);
             }
             default -> {
                 return null;
@@ -204,8 +116,24 @@ public class YamlParsingUtils {
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " does not have an output string!");
             return;
         }
-        OutputInstance output = parseOutputInstance(OUTPUT_PATH.resolve(outputString[0].toLowerCase()).resolve(outputString[1] + ".yaml").toFile(), OutputType.valueOf(outputString[0].toUpperCase()));
-        Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputString[0].toUpperCase() + "| result is:  " + output.getOutputItems().toString());
+        OutputType outputType;
+        try {
+            outputType = OutputType.valueOf(outputString[0].toUpperCase());
+        } catch (IllegalArgumentException e) {
+            SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " has unknown output type '" + outputString[0] + "' (expected basic, random, random_id or composite). Recipe not loaded.");
+            return;
+        }
+        File outputFile = resolveYamlFile(OUTPUT_PATH.resolve(outputString[0].toLowerCase()), outputString[1]);
+        if(outputFile == null){
+            SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " references output '" + outputString[0] + ":" + outputString[1] + "' but no such file exists. Recipe not loaded.");
+            return;
+        }
+        OutputInstance output = parseOutputInstance(outputFile, outputType);
+        if(output == null){
+            SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " not loaded because its output '" + outputFile.getName() + "' failed to load (see warnings above).");
+            return;
+        }
+        Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputType + "| result is:  " + output.getOutputItems().toString());
         String tableType = YamlConfiguration.loadConfiguration(file).getString("table_type", "NONE");
         String name = YamlConfiguration.loadConfiguration(file).getString("name", "Unnamed Recipe");
         switch(recipeType){

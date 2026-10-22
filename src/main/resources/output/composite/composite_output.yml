@@ -1,43 +1,29 @@
-output_steps:
-  step1:
-    order: 0
-    step_type: "fetch"
-    fetch_type: "marked"
-    fetch_id: "0"
-  step2:
-    order: 1
-    step_type: "tag"
-    operation: "modify"
-    tag_id: "tag1"
-    amounts:
-      - "amount1"
-      - "amount2"
-  step3:
-    order: 2
-    step_type: "property"
-    operation: "remove"
-    property_id: "property1"
-  step4:
-    order: 3
-    step_type: "cmd"
-    operation: "set"
-    amount_type: "float"
-    amounts:
-      - "amount1"
-      - "amount2"
-    index: 0
-  step5:
-    order: 4
-    step_type: "cmd"
-    operation: "add"
-    amount_type: "string"
-    amount: "amount1"
-  step6:
-    order: 5
-    step_type: "blend"
-    reference_1: "ref1"
-    reference_2: "ref2"
-  step7:
-    order: 6
-    step_type: "save"
+# Example composite output. See docs/COMPOSITE_FORMAT.md for every step and placeholder.
+#
+# This template edits the first marked ingredient: it stores a colour taken from the second
+# marked ingredient in the pivot's custom model data colour list, at the slot given by the
+# pivot's own layer_count tag, then increases layer_count by one and saves the result.
+# It assumes a recipe of type SHAPED_MARKING that marks exactly two inputs, and that the
+# tags layer_count (int) and dye_color (int) are registered in SkysongItems' config.yml.
+
+output_strings:
+  - "<gray>Adds a coloured layer to the marked item"
+
+steps:
+  - type: fetch
+    fetch_type: marked            # marked | generated
+    fetch_id: "0"                 # marked index, or an item file name when generated
+
+  - type: cmd
+    cmd_type: color               # float | string | boolean | color
+    operation: add                # set | add | remove
+    index: "marked:0;tag:layer_count"
+    values: ["marked:1;tag:dye_color"]
+
+  - type: tag
+    operation: add                # set | add | remove
+    tag_id: layer_count
+    values: ["1"]
+
+  - type: save
     amount: 1

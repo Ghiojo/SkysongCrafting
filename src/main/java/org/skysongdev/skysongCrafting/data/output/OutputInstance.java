@@ -1,7 +1,6 @@
 package org.skysongdev.skysongCrafting.data.output;
 
 import org.bukkit.Bukkit;
-import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
 
@@ -25,7 +24,13 @@ public abstract class OutputInstance {
         return outputItems;
     }
 
-    public abstract ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<MarkedItem> markedItems);
+    /**
+     * Produces the items for one craft.
+     *
+     * @param markedItems copies of the marked recipe inputs, in marked order (empty for non-marking recipes)
+     * @throws OutputException if the output cannot be produced; the craft is then refused and nothing is consumed
+     */
+    public abstract ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<MarkedItem> markedItems) throws OutputException;
 
     public abstract ArrayList<String> getOutputStrings();
 }
