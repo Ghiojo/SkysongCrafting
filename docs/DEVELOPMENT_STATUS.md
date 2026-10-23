@@ -19,7 +19,7 @@ when resuming work; `docs/COMPOSITE_FORMAT.md` describes the composite template 
   `type: message` commits (`feat:`, `fix:`, `docs:`, `refactor:`). Owner builds and tests in-game.
   Ask before adding dependencies or changing a YAML format. English for code and comments.
 
-## Milestone 1 — composite engine (in progress)
+## Milestone 1 — composite engine (core verified in-game 2026-10-23; awaiting PR approval)
 
 Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
 
@@ -45,8 +45,13 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
 - Duplicate sound playback in `CraftItem` removed (the first call could NPE on an unknown sound).
 
 ### Checks performed
-- `javac` syntax pass over all sources (Paper API unavailable in the assistant's environment, so
-  only syntax was verifiable). No syntax errors. **Not compiled against Paper, not run.**
+- `javac` syntax pass over all sources in the assistant's environment (Paper API unavailable there).
+- Owner built the branch and tested on the server (2026-10-23): a SHAPED_MARKING recipe with a
+  composite template (fetch marked → cmd color add at placeholder index → cmd string add →
+  tag add → save) produced the edited item with the expected data; a template with an unknown
+  tag refused the craft with the step message and consumed nothing.
+- Note while testing: items generated before the SkysongItems tag rename still carried the old
+  `crafting_material` tag and were not recognised by any recipe — not a code issue.
 
 ### Known risks to verify in-game
 - `SaveStep` sets an empty custom model data component so `SkysongItem(ItemStack)` does not store
@@ -67,6 +72,8 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
 ## Milestone 2 — recipe side + corrections (planned)
 - Conditional recipes loadable from YAML (`conditions:` on marking recipes), indexed by marked
   position; empty marked slot should fail the condition.
+- `config.yml` ships `crafting_id` but the code reads `crafting_key` (key is effectively always
+  `material_id`); align the two.
 - `workstations.yml` not copied on first run; UUID `!=` comparisons in `WorkstationListener`;
   permission-name mismatches with `plugin.yml`; DB row deleted before the break-permission check;
   `RandomIdListener` fires before outputs exist; `ReloadCommand` casts console to `Player`.
