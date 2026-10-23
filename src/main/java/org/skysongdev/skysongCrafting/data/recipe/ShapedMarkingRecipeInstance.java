@@ -19,18 +19,17 @@ public class ShapedMarkingRecipeInstance extends ShapedRecipeInstance{
     }
 
     @Override
-    public ArrayList<MarkedItem> ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory){
+    public ArrayList<MarkedItem> collectMarkedItems(ArrayList<Integer> inputSlots, Inventory inventory){
         ArrayList<MarkedItem> markedItems = new ArrayList<>();
         int j = 0;
-        for(int i = 0; i < materialConsumption.size();  i++) {
+        for(int i = 0; i < materialConsumption.size() && i < materialMarks.size(); i++) {
             if (materialMarks.get(i)) {
                 ItemStack item = inventory.getItem(inputSlots.get(i));
+                if (item == null || item.getType() == Material.AIR) continue;
                 markedItems.add(new MarkedItem(j, item.clone()));
                 j++;
             }
         }
-        super.ConsumeMaterials(inputSlots, inventory);
-
         return markedItems;
     }
 }

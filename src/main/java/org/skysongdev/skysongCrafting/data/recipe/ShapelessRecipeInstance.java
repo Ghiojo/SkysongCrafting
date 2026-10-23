@@ -23,8 +23,8 @@ public class ShapelessRecipeInstance extends RecipeInstance{
 
 
     @Override
-    public ArrayList<MarkedItem> ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory) {
-        if (inputSlots == null || inventory == null) return null;
+    public void ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory) {
+        if (inputSlots == null || inventory == null) return;
 
         for (Integer slotIndex : inputSlots) {
             if (slotIndex == null) continue;
@@ -39,6 +39,5 @@ public class ShapelessRecipeInstance extends RecipeInstance{
                 inventory.setItem(slotIndex, null);
             }
         }
-        return null;
     }
 }

@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.recipe.ConditionalShapedRecipeInstance;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import org.skysongdev.skysongCrafting.events.CraftingEvent;
@@ -27,6 +28,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 import static org.skysongdev.skysongCrafting.utils.Constants.CRAFTING_KEY;
+import static org.skysongdev.skysongCrafting.utils.Constants.PLUGIN_TAG;
 
 public abstract class AbstractWorkbench implements InventoryHolder {
     protected WorkbenchGUIType guiType;
@@ -128,38 +130,61 @@ public abstract class AbstractWorkbench implements InventoryHolder {
         return inventory;
     }
 
+    /**
+     * Crafting order, chosen so a failure can never cost or duplicate items:
+     * 1. copy the marked inputs; 2. run the output on the copies; 3. generate every result stack;
+     * 4. only then consume the materials; 5. place the results.
+     * Steps 1-3 touch nothing in the grid, so if any of them fails the craft is refused and the grid is untouched.
+     */
     public void CraftItem(Player player){
         if(foundRecipes.isEmpty())
             return;
-        Bukkit.getPluginManager().callEvent(new CraftingEvent(foundRecipes.get(recipeIndex), inputSlotReferences, outputSlotReferences, player, inventory));
-        ArrayList<MarkedItem> markedItems = foundRecipes.get(recipeIndex).ConsumeMaterials(inputSlotReferences, inventory);
+        RecipeInstance recipe = foundRecipes.get(recipeIndex);
 
-        for(SkysongItemWithAmmount skysongItem : foundRecipes.get(recipeIndex).getResults().getOutput(markedItems)){
+        ArrayList<MarkedItem> markedItems = recipe.collectMarkedItems(inputSlotReferences, inventory);
+
+        ArrayList<ItemStack> results = new ArrayList<>();
+        try {
+            for(SkysongItemWithAmmount skysongItem : recipe.getResults().getOutput(markedItems)){
+                ItemStack stack = SkysongItems.getPlugin().getUtils().GenerateSkysongItem(skysongItem.getItem());
+                stack.setAmount(skysongItem.getAmmount());
+                results.add(stack);
+            }
+        } catch (OutputException e) {
+            player.sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<red>Could not craft: <gray>" + e.getMessage()));
+            SkysongCrafting.Instance().getLogger().warning("Craft refused for " + player.getName() + " (recipe '" + recipe.getDisplayItem().getItemMeta().getItemName() + "'): " + e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            player.sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<red>Could not craft: <gray>an internal error occurred, please report it."));
+            SkysongCrafting.Instance().getLogger().severe("Craft failed for " + player.getName() + " while generating results: " + e);
+            e.printStackTrace();
+            return;
+        }
+
+        Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, inputSlotReferences, outputSlotReferences, player, inventory));
+        recipe.ConsumeMaterials(inputSlotReferences, inventory);
+
+        for(ItemStack newItem : results){
             boolean added = false;
             for(int slot : outputSlotReferences){
                 ItemStack currentItem = inventory.getItem(slot);
                 if(currentItem == null || currentItem.getType() == org.bukkit.Material.AIR){
                     added = true;
-                    ItemStack newItem = SkysongItems.getPlugin().getUtils().GenerateSkysongItem(skysongItem.getItem());
-                    newItem.setAmount(skysongItem.getAmmount());
                     inventory.setItem(slot, newItem);
                     break;
-                } else if(currentItem.isSimilar(SkysongItems.getPlugin().getUtils().GenerateSkysongItem(skysongItem.getItem())) && currentItem.getAmount() + skysongItem.getAmmount() <= currentItem.getMaxStackSize()){
+                } else if(currentItem.isSimilar(newItem) && currentItem.getAmount() + newItem.getAmount() <= currentItem.getMaxStackSize()){
                     added = true;
-                    currentItem.setAmount(currentItem.getAmount() + skysongItem.getAmmount());
+                    currentItem.setAmount(currentItem.getAmount() + newItem.getAmount());
                     inventory.setItem(slot, currentItem);
                     break;
                 }
             }
             if(!added){
-                ItemStack newItem = SkysongItems.getPlugin().getUtils().GenerateSkysongItem(skysongItem.getItem());
-                newItem.setAmount(skysongItem.getAmmount());
                 player.getInventory().addItem(newItem);
             }
         }
-        player.playSound(player.getLocation(), Registry.SOUND_EVENT.get(new NamespacedKey("minecraft", foundRecipes.get(recipeIndex).getCraftingSound())), 0.5f, 1.0f);
 
-        String soundName = foundRecipes.get(recipeIndex).getCraftingSound();
+        String soundName = recipe.getCraftingSound();
         if (soundName != null && !soundName.isBlank()) {
             try {
                 String key = soundName.toLowerCase(Locale.ROOT);

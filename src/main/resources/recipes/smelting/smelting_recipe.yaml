@@ -1,7 +1,7 @@
 # Icon for the Recipe crafting icon
 icon: "RED_WOOL"
 
-# Type of recipe, can be either shaped or shapeless
+# Type of recipe: SHAPED, SHAPELESS, SHAPED_MARKING or SHAPELESS_MARKING
 recipe_type: "SHAPELESS"
 
 # Craftsman table type the recipe was made for
@@ -9,10 +9,10 @@ table_type: "craftsman"
 
 # Sound to play when crafting the item, use PaperMC's "sound" enums
 # https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Sound.html
-sound: "ENTITY_VILLAGER_WORK_TOOLSMITH"
+sound: "block.furnace.fire_crackle"
 
 # Name of the recipe that shows up on the icon
-name: "Shaped Recipe"
+name: "Smelting Recipe"
 
 # Output of the recipe, must be formatted like "type:filename". Type must be the folder name.
 # Filename does not include the .yaml extension.
@@ -23,7 +23,8 @@ output: "basic:basic_output"
 skill_requirements:
   - "smithing:16"
 
-# Ingredients of the recipe in item names. For multiple of the same item, use *(number) at the end (e.g. item1*3 for 3 of item1).
-pattern:
+# Ingredients of the recipe as material_id values, in any order. For multiple of the same item, use *(number)
+# at the end (e.g. item1*3 for 3 of item1). Use "#tag_id" to accept any item of a tag (see tags/).
+inputs:
   - "item1"
   - "item2*2"

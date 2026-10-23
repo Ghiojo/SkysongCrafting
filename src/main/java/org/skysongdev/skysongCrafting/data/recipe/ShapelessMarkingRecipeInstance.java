@@ -23,23 +23,29 @@ public class ShapelessMarkingRecipeInstance extends ShapelessRecipeInstance {
     }
 
 
+    /**
+     * Marks every grid item whose crafting id matches a marked entry of the recipe, in grid order.
+     * (Previously compared the id string against a MaterialCount object, so nothing was ever marked.)
+     */
     @Override
-    public ArrayList<MarkedItem> ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory) {
+    public ArrayList<MarkedItem> collectMarkedItems(ArrayList<Integer> inputSlots, Inventory inventory) {
         ArrayList<MarkedItem> markedItems = new ArrayList<>();
+        int j = 0;
         for (Integer slotIndex : inputSlots) {
             if (slotIndex == null) continue;
             ItemStack item = inventory.getItem(slotIndex);
-            if (item == null || item.getType() == Material.AIR) continue;
+            if (item == null || item.getType() == Material.AIR || item.getItemMeta() == null) continue;
+            String craftingId = item.getItemMeta().getPersistentDataContainer().get(CRAFTING_KEY, PersistentDataType.STRING);
+            if (craftingId == null) continue;
 
-            for(int i = 0; i < materialConsumption.size(); i++){
-                if(materialMarks.get(i) && item.getItemMeta().getPersistentDataContainer().get(CRAFTING_KEY, PersistentDataType.STRING).equals(materialConsumption.get(i))){
-                    markedItems.add(new MarkedItem(i, item.clone()));
+            for (int i = 0; i < materialConsumption.size() && i < materialMarks.size(); i++) {
+                if (materialMarks.get(i) && craftingId.equalsIgnoreCase(materialConsumption.get(i).getId())) {
+                    markedItems.add(new MarkedItem(j, item.clone()));
+                    j++;
                     break;
                 }
             }
         }
-        super.ConsumeMaterials(inputSlots, inventory);
-
         return markedItems;
     }
 }
