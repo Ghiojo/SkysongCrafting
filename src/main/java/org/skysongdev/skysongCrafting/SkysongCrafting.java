@@ -13,7 +13,6 @@ import org.skysongdev.skysongCrafting.utils.GUIUtils;
 import org.skysongdev.skysongCrafting.utils.Utils;
 import org.skysongdev.skysongCrafting.utils.YamlParsingUtils;
 
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
@@ -67,7 +66,7 @@ public final class SkysongCrafting extends JavaPlugin {
         try{
             database.dumpWorkstationData();
         }catch(SQLException e){
-            Bukkit.getLogger().warning("[SkysongItems] Unable to load workstations from database!");
+            Bukkit.getLogger().warning("[SkysongCrafting] Unable to load workstations from database!");
             e.printStackTrace();
         }
 
@@ -131,7 +130,7 @@ public final class SkysongCrafting extends JavaPlugin {
     public void initializeDefaultResources() {
         File dataFolder = getDataFolder();
         if (!dataFolder.exists() && !dataFolder.mkdirs()) {
-            getLogger().warning("No se pudo crear la carpeta de datos: " + dataFolder.getPath());
+            getLogger().warning("Could not create the data folder: " + dataFolder.getPath());
             return;
         }
 
@@ -140,21 +139,20 @@ public final class SkysongCrafting extends JavaPlugin {
                 "output/",
                 "tags/",
                 "recipes/",
-                "workstations/",
-                "config.yml"
+                "workstations.yml"
         };
 
         try {
             URL codeLocation = getClass().getProtectionDomain().getCodeSource().getLocation();
             Path codePath = Paths.get(codeLocation.toURI());
 
-            // Determinar qué prefijos saltar: si existe cualquier archivo en la carpeta destino
+            // Decide which defaults to skip because the server already has them
             java.util.Set<String> skipPrefixes = new java.util.HashSet<>();
             for (String p : prefixes) {
                 Path target = dataFolder.toPath().resolve(p).normalize();
                 try {
                     if (p.endsWith("/")) {
-                        // Para prefijos que son directorios, si existe la carpeta y contiene cualquier archivo (a cualquier profundidad), saltar
+                        // Folders are skipped when they already contain any file (at any depth)
                         if (Files.exists(target) && Files.isDirectory(target)) {
                             try (java.util.stream.Stream<Path> s = Files.walk(target)) {
                                 boolean hasAnyFile = s.anyMatch(path -> !Files.isDirectory(path));
@@ -162,16 +160,13 @@ public final class SkysongCrafting extends JavaPlugin {
                             }
                         }
                     } else {
-                        // Para prefijos que son archivos (ej. config.yml), si ya existe cualquier archivo en la carpeta de datos, saltar
-                        try (java.util.stream.Stream<Path> s = Files.list(dataFolder.toPath())) {
-                            boolean anyFile = s.anyMatch(path -> !Files.isDirectory(path));
-                            if (anyFile) skipPrefixes.add(p);
-                        }
-                        // Además, si el archivo específico ya existe, también saltar
+                        // Single files are only skipped when that file itself already exists.
+                        // (Previously any file in the data folder caused the skip, and config.yml is always
+                        // there after saveDefaultConfig(), so workstations.yml was never copied.)
                         if (Files.exists(target)) skipPrefixes.add(p);
                     }
                 } catch (IOException e) {
-                    getLogger().warning("Error comprobando existencia de recursos en " + target + ": " + e.getMessage());
+                    getLogger().warning("Error checking existing resources in " + target + ": " + e.getMessage());
                 }
             }
 
@@ -193,7 +188,7 @@ public final class SkysongCrafting extends JavaPlugin {
                                 }
                             }
                         } catch (IOException e) {
-                            getLogger().warning("Error copiando recurso " + sourcePath + ": " + e.getMessage());
+                            getLogger().warning("Error copying resource " + sourcePath + ": " + e.getMessage());
                         }
                     });
                 }
