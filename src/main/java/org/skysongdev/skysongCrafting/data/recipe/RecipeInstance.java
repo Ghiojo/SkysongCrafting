@@ -119,4 +119,41 @@ public abstract class RecipeInstance {
 
     /** Removes the consumed materials from the grid. Only called once the output has been produced successfully. */
     public abstract void ConsumeMaterials(ArrayList<Integer> inputSlots, Inventory inventory);
+
+    /** Applies one ingredient's {@link ConsumptionRule} to the item in {@code slot}. */
+    protected void consumeSlot(Inventory inventory, int slot, ConsumptionRule rule) {
+        ItemStack item = inventory.getItem(slot);
+        if (item == null || item.getType() == Material.AIR) return;
+
+        switch (rule.getKind()) {
+            case KEEP:
+                return;
+            case CHARGES: {
+                ItemMeta meta = item.getItemMeta();
+                PersistentDataContainer pdc = meta == null ? null : meta.getPersistentDataContainer();
+                if (pdc == null || !pdc.has(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER)) {
+                    // The recipe asked for charges on an item that has none: consume it like a normal ingredient
+                    // rather than silently keeping it (keeping would make the ingredient free).
+                    SkysongCrafting.Instance().getLogger().warning("Recipe wanted to take " + rule.getCharges()
+                            + " charge(s) from an item without a charges tag (" + item.getType() + "); consuming one instead.");
+                    consumeSlot(inventory, slot, ConsumptionRule.CONSUME_ONE);
+                    return;
+                }
+                int charges = pdc.get(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER);
+                pdc.set(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER, Math.max(0, charges - rule.getCharges()));
+                item.setItemMeta(meta);
+                ItemStack updated = org.skysongdev.skysongitems.utils.Utils.updateItemLore(item);
+                inventory.setItem(slot, updated != null ? updated : item);
+                return;
+            }
+            case CONSUME:
+            default:
+                if (item.getAmount() > 1) {
+                    item.setAmount(item.getAmount() - 1);
+                    inventory.setItem(slot, item);
+                } else {
+                    inventory.setItem(slot, null);
+                }
+        }
+    }
 }

@@ -6,7 +6,8 @@ engine covers "edit one of the ingredients", "make a new item using data from th
 and anything in between, so new crafting behaviours are written in YAML, not Java.
 
 Files live in `plugins/SkysongCrafting/output/composite/`, with `.yml` or `.yaml` extension.
-A recipe points at one with `output: "composite:<file name without extension>"`.
+A recipe points at one with `output: "composite:<file name without extension>"`. Recipe files
+themselves (patterns, marking, conditions, consumption) are described in `RECIPE_FORMAT.md`.
 
 ## Vocabulary
 
@@ -100,7 +101,7 @@ Any `values` entry or `index` may be a placeholder. A placeholder contains a `;`
 | Part | Options |
 |---|---|
 | reference | `marked:N` — the N-th marked item · `pivot` — the item being edited |
-| data | `tag:TAG_ID` · `cmd:float:I` · `cmd:string:I` · `cmd:boolean:I` · `cmd:color:I` (RGB integer) · `cmd:floats` / `cmd:strings` / `cmd:booleans` / `cmd:colors` (count) · `uuid` (random id) |
+| data | `tag:TAG_ID` · `material` (e.g. SHIELD) · `amount` (stack size) · `cmd:float:I` · `cmd:string:I` · `cmd:boolean:I` · `cmd:color:I` (RGB integer) · `cmd:floats` / `cmd:strings` / `cmd:booleans` / `cmd:colors` (count) · `uuid` (random id) |
 
 Examples: `marked:1;tag:dye_color`, `pivot;cmd:colors` (the next free colour slot), `pivot;uuid`.
 

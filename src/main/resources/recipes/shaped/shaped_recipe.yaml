@@ -24,6 +24,7 @@ skill_requirements:
 
 # Ingredients of the recipe in a 5x5 grid, use "" for empty slots.
 # The strings in each slot are the SkysongItems material_id of the required item. Use "#tag_id" to accept any item of a tag.
+# Suffixes change how a slot is consumed: "wand^2" takes 2 charges instead of the item, "anvil!keep" leaves it. See docs/RECIPE_FORMAT.md.
 pattern:
   - [ "","","","","" ]
   - [ "","","","","" ]
