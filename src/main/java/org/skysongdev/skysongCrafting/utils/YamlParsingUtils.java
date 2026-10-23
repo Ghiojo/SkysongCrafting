@@ -136,6 +136,8 @@ public class YamlParsingUtils {
         Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputType + "| result is:  " + output.getOutputItems().toString());
         String tableType = YamlConfiguration.loadConfiguration(file).getString("table_type", "NONE");
         String name = YamlConfiguration.loadConfiguration(file).getString("name", "Unnamed Recipe");
+        List<RecipeCondition> conditions = RecipeConditionParser.parse(file, YamlConfiguration.loadConfiguration(file));
+        if(conditions == null) return; // malformed; already warned
         switch(recipeType){
             case "SHAPED":
                 ArrayList<?> pattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getList("pattern"));
@@ -155,7 +157,7 @@ public class YamlParsingUtils {
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapedRecipeMap()
                             .computeIfAbsent(key, k -> new ArrayList<>());
-                    list.add(new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements));
+                    list.add(withConditions(new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements), conditions));
                 }
                 return;
             case "SHAPELESS":
@@ -174,7 +176,7 @@ public class YamlParsingUtils {
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapelessRecipeMap()
                             .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    list.add(new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements));
+                    list.add(withConditions(new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements), conditions));
                     Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
                     for(MaterialCount mc : materialCounts){
                         Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
@@ -200,7 +202,7 @@ public class YamlParsingUtils {
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapedRecipeMap()
                             .computeIfAbsent(key, k -> new ArrayList<>());
-                    list.add(new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern));
+                    list.add(withConditions(new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern), conditions));
                 }
                 return;
             case "SHAPELESS_MARKING":
@@ -220,7 +222,7 @@ public class YamlParsingUtils {
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapelessRecipeMap()
                             .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    list.add(new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern));
+                    list.add(withConditions(new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern), conditions));
                     Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
                     for(MaterialCount mc : materialCounts){
                         Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
@@ -230,6 +232,11 @@ public class YamlParsingUtils {
             default:
                 return;
         }
+    }
+
+    private static RecipeInstance withConditions(RecipeInstance recipe, List<RecipeCondition> conditions){
+        recipe.setConditions(conditions);
+        return recipe;
     }
 
     /**

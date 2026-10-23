@@ -28,6 +28,8 @@ import java.util.UUID;
  *               cmd:boolean:I          I-th flag
  *               cmd:color:I            I-th colour, as an RGB integer
  *               cmd:floats | cmd:strings | cmd:booleans | cmd:colors   number of entries
+ *               material               the item's Material name (e.g. SHIELD)
+ *               amount                 the stack size
  *               uuid                   a fresh random UUID (reference is ignored)
  * </pre>
  * Example: {@code marked:1;tag:dye_color} reads the dye_color tag of the second marked item.
@@ -56,6 +58,9 @@ public final class PlaceholderParser {
         }
 
         ItemStack item = resolveReference(reference, stepData);
+        if (dataType.equals("material")) return item.getType().name();
+        if (dataType.equals("amount")) return String.valueOf(item.getAmount());
+
         ItemMeta meta = item.getItemMeta();
         if (meta == null) throw new OutputException("item referenced by '" + reference + "' has no item data");
 
@@ -93,7 +98,7 @@ public final class PlaceholderParser {
                 }
             }
             default:
-                throw new OutputException("unknown data type '" + dataType + "' in placeholder '" + value + "' (expected tag, cmd or uuid)");
+                throw new OutputException("unknown data type '" + dataType + "' in placeholder '" + value + "' (expected tag, cmd, material, amount or uuid)");
         }
     }
 

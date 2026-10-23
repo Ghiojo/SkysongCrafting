@@ -10,7 +10,9 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
+import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
+import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
 import org.skysongdev.skysongstats.SkysongStats;
 import org.skysongdev.skysongstats.Utils.Utils.Skills;
@@ -26,6 +28,7 @@ public abstract class RecipeInstance {
     protected Map<Skills, Integer> skillRequirements;
     protected String craftingTableType;
     protected String craftingSound;
+    protected List<RecipeCondition> conditions = new ArrayList<>();
 
     public String getCraftingSound() {
         return craftingSound;
@@ -77,6 +80,33 @@ public abstract class RecipeInstance {
     }
     public Map<Skills, Integer> getSkillRequirements() {
         return skillRequirements;
+    }
+
+    public void setConditions(List<RecipeCondition> conditions) {
+        this.conditions = conditions == null ? new ArrayList<>() : conditions;
+    }
+
+    public List<RecipeCondition> getConditions() {
+        return conditions;
+    }
+
+    /**
+     * Evaluates the recipe's conditions against the current grid.
+     * @return {@code null} when every condition holds (or there are none); otherwise the reason the
+     *         recipe cannot be crafted right now, in the same wording as the condition in the file.
+     */
+    public String checkConditions(ArrayList<Integer> inputSlots, Inventory inventory) {
+        if (conditions.isEmpty()) return null;
+        StepData data = new StepData(collectMarkedItems(inputSlots, inventory), null, new ArrayList<>());
+        for (RecipeCondition condition : conditions) {
+            try {
+                String failure = condition.test(data);
+                if (failure != null) return failure;
+            } catch (OutputException e) {
+                return e.getMessage();
+            }
+        }
+        return null;
     }
 
     /**
