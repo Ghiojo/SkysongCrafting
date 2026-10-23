@@ -3,6 +3,7 @@ package org.skysongdev.skysongCrafting.listeners;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.data.output.RandomIdOutput;
@@ -11,35 +12,25 @@ import org.skysongdev.skysongitems.SkysongItems;
 
 import java.util.UUID;
 
+/**
+ * For {@code random_id} outputs: gives every produced item whose id tag is empty a fresh UUID.
+ * Works on the result stacks carried by the event, before they are placed (previously it searched
+ * the output slots and the player's inventory, which did not contain the results yet).
+ */
 public class RandomIdListener implements Listener {
     @EventHandler
     public void randomizeId(CraftingEvent event){
-        if(!(event.getRecipe().getResults() instanceof RandomIdOutput))
+        if(!(event.getRecipe().getResults() instanceof RandomIdOutput output))
             return;
-        RandomIdOutput output = (RandomIdOutput) event.getRecipe().getResults();
-        boolean success = false;
 
         NamespacedKey key = new NamespacedKey(SkysongItems.getPlugin(), output.getIdToRandomize());
-        for(Integer i: event.getOutputSlotReferences() ){
-            if(event.getInventory().getItem(i).getItemMeta().getPersistentDataContainer().has(key) && event.getInventory().getItem(i).getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING).isEmpty()){
-                success = true;
-                ItemMeta meta = event.getInventory().getItem(i).getItemMeta();
-                meta.getPersistentDataContainer().set(new NamespacedKey(SkysongItems.getPlugin(), output.getIdToRandomize()), PersistentDataType.STRING, UUID.randomUUID().toString());
-                event.getInventory().getItem(i).setItemMeta(meta);
-                break;
-            }
+        for(ItemStack result : event.getResults()){
+            ItemMeta meta = result.getItemMeta();
+            if(meta == null) continue;
+            String current = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+            if(current != null && !current.isEmpty()) continue;
+            meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, UUID.randomUUID().toString());
+            result.setItemMeta(meta);
         }
-        if(!success){
-            for(int i = 0; i < event.getPlayer().getInventory().getSize(); i++){
-                if(event.getPlayer().getInventory().getItem(i) == null) continue;
-                if(event.getPlayer().getInventory().getItem(i).getItemMeta().getPersistentDataContainer().has(key) && event.getPlayer().getInventory().getItem(i).getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING).isEmpty()){
-                    ItemMeta meta = event.getPlayer().getInventory().getItem(i).getItemMeta();
-                    meta.getPersistentDataContainer().set(new NamespacedKey(SkysongItems.getPlugin(), output.getIdToRandomize()), PersistentDataType.STRING, UUID.randomUUID().toString());
-                    event.getPlayer().getInventory().getItem(i).setItemMeta(meta);
-                    break;
-                }
-            }
-        }
-
     }
 }

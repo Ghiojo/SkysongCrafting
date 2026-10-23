@@ -161,7 +161,7 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             return;
         }
 
-        Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, inputSlotReferences, outputSlotReferences, player, inventory));
+        Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, results, inputSlotReferences, outputSlotReferences, player, inventory));
         recipe.ConsumeMaterials(inputSlotReferences, inventory);
 
         for(ItemStack newItem : results){
