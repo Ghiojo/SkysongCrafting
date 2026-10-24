@@ -69,7 +69,7 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
   `readMarkingPattern`. Run with `gradlew test`; `gradlew build -x test` skips them.
   Item/step logic needs a server (or MockBukkit) and is not unit-tested.
 
-## Milestone 2 — recipe side + corrections (implemented, awaiting owner test)
+## Milestone 2 — recipe side + corrections (verified in-game 2026-10-24; awaiting PR approval)
 
 Branch: `feature/recipe-conditions-and-fixes` (off `master` @ eec7013). One commit per item.
 
@@ -91,17 +91,24 @@ Branch: `feature/recipe-conditions-and-fixes` (off `master` @ eec7013). One comm
   matched); `item!keep` / `item^0` added; both work in shapeless `inputs`, one rule per ingredient
   id (conflicting duplicates refuse the recipe). Shared `RecipeInstance.consumeSlot`.
 - `docs/RECIPE_FORMAT.md` added. Tests: `RecipeConditionTest`, `RecipeConditionParserTest`,
-  `ConsumptionRuleTest` (expected total 38).
+  `ConsumptionRuleTest` (37 tests in total).
 
 ### Checks performed
-- `javac` syntax pass (Paper API unavailable to the assistant). Not compiled against Paper, not run.
+- `javac` syntax pass (Paper API unavailable to the assistant).
+- Owner: `gradlew test` 37 passed; in-game (2026-10-24) conditions (button lore + craft-time
+  refusal), `^N` charges, `!keep`, shapeless `*2^1` and the conflicting-duplicate refusal,
+  `table_type: ANY`, `/sc reload` from console, `workstations.yml` on first run, owner access to
+  private workstations, break refusal, random_id ids — all behaved as specified.
 
-### Owner to verify in-game
-- conditions button lore and craft-time refusal; `/sc reload` from console; `workstations.yml`
-  appears in a fresh data folder; a `^N` ingredient loses charges and stays; a `!keep` ingredient
-  stays; shapeless `dye*2^1`; random_id output receives an id; `table_type: ANY` recipe shows.
+## Milestone 3 — Paper 1.21.11 (next)
+- Bump `paper-api` in build.gradle (compile + test), check `CustomModelDataComponent`,
+  `Registry.SOUND_EVENT`, `setItemModel`, `getItemName` against the 1.21.11 API, rebuild, re-run
+  the T1-T8 test set.
 
-## Milestone 3 — Paper 1.21.11.
+## Later / optional
+- Shapeless conditional recipes already covered (conditions work on any recipe type).
+- Composite steps for name/lore editing, if wanted.
+- MockBukkit for step-level unit tests, if wanted (new test dependency).
 
 ## Open questions for the owner
 - Shapeless conditional recipes wanted?
