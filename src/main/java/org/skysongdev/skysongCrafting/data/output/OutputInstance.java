@@ -1,6 +1,5 @@
 package org.skysongdev.skysongCrafting.data.output;
 
-import org.bukkit.Bukkit;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
 
@@ -13,9 +12,6 @@ public abstract class OutputInstance {
 
     public OutputInstance(ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings, OutputType outputType) {
         this.outputItems = outputItems;
-        for(SkysongItemWithAmmount item : outputItems){
-            Bukkit.getLogger().info("Output Item: " + item.getItem().getName() + " x" + item.getAmmount() + " (Type: " + outputType + ")" );
-        }
         this.outputStrings = outputStrings;
         this.outputType = outputType;
     }

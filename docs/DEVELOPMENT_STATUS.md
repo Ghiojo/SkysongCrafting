@@ -108,9 +108,10 @@ minutes; refactors never mixed with behaviour changes.
 1. Paper 1.21.11 — `chore/paper-1.21.11`: version bump only; API fixes follow the owner's
    compile output. Re-run the T1-T8 test set after the build.
 2. Recipe loader de-duplication (pure refactor of `initializeRecipeInstance`).
-3. Startup log noise to debug / removed.
+3. Startup log noise removed; one summary line at enable; unknown recipe_type now warns.
 4. `README.md` linking the format docs.
-5. Per-player workbench GUIs (today one inventory is shared per placed workstation).
+5. ~~Per-player workbench GUIs~~ — not a bug: the shared inventory per placed workstation is
+   intended (players can see what someone else is doing at the bench). Do not change.
 6. Tag-expansion guard (optional).
 
 ## Later / optional
