@@ -18,6 +18,11 @@ import java.util.function.Consumer;
 public final class RecipeConditionParser {
     private RecipeConditionParser() {}
 
+    /** Thrown for a malformed entry; the message is logged with the entry number. */
+    private static class ParseException extends Exception {
+        ParseException(String message) { super(message); }
+    }
+
     public static List<RecipeCondition> parse(File file, YamlConfiguration yaml) {
         return parse(file, yaml, message -> SkysongCrafting.Instance().getLogger().warning(message));
     }
@@ -26,43 +31,45 @@ public final class RecipeConditionParser {
         List<RecipeCondition> conditions = new ArrayList<>();
         if (!yaml.contains("conditions")) return conditions;
 
-        List<Map<?, ?>> raw = yaml.getMapList("conditions");
-        if (raw.isEmpty() && yaml.getList("conditions") != null && !yaml.getList("conditions").isEmpty()) {
+        List<Map<?, ?>> entries = yaml.getMapList("conditions");
+        if (entries.isEmpty() && yaml.getList("conditions") != null && !yaml.getList("conditions").isEmpty()) {
             warnings.accept("Recipe '" + file.getName() + "' conditions must be a list of entries with item/check/operator/value. Recipe not loaded.");
             return null;
         }
 
-        for (int i = 0; i < raw.size(); i++) {
-            Map<?, ?> entry = raw.get(i);
-            String item = string(entry, "item");
-            String check = string(entry, "check");
-            String operatorSymbol = string(entry, "operator");
-            String value = string(entry, "value");
-
-            String problem = null;
-            if (item == null) problem = "missing 'item' (e.g. marked:0)";
-            else if (check == null) problem = "missing 'check' (e.g. tag:layer_count, material, amount)";
-            else if (operatorSymbol == null) problem = "missing 'operator' (==, !=, <, >, <=, >=)";
-            else if (value == null) problem = "missing 'value'";
-            else if (!item.toLowerCase().startsWith("marked:") && !item.equalsIgnoreCase("pivot")) problem = "'item' must be marked:N";
-            else if (item.equalsIgnoreCase("pivot")) problem = "'item' cannot be 'pivot' in a recipe condition (there is no pivot before crafting); use marked:N";
-
-            RecipeCondition.Operator operator = operatorSymbol == null ? null : RecipeCondition.Operator.fromSymbol(operatorSymbol);
-            if (problem == null && operator == null) problem = "'operator' is '" + operatorSymbol + "', expected one of ==, !=, <, >, <=, >=";
-
-            if (problem != null) {
-                warnings.accept("Recipe '" + file.getName() + "' condition " + (i + 1) + ": " + problem + ". Recipe not loaded.");
+        for (int i = 0; i < entries.size(); i++) {
+            try {
+                conditions.add(parseEntry(entries.get(i)));
+            } catch (ParseException e) {
+                warnings.accept("Recipe '" + file.getName() + "' condition " + (i + 1) + ": " + e.getMessage() + ". Recipe not loaded.");
                 return null;
             }
-            conditions.add(new RecipeCondition(item, check, operator, value));
         }
         return conditions;
     }
 
-    private static String string(Map<?, ?> entry, String key) {
-        Object value = entry.get(key);
-        if (value == null) return null;
-        String s = String.valueOf(value).trim();
-        return s.isEmpty() ? null : s;
+    private static RecipeCondition parseEntry(Map<?, ?> entry) throws ParseException {
+        String item = require(entry, "item", "e.g. marked:0");
+        String check = require(entry, "check", "e.g. tag:layer_count, material, amount");
+        String operatorSymbol = require(entry, "operator", "==, !=, <, >, <=, >=");
+        String value = require(entry, "value", null);
+
+        if (!item.toLowerCase().startsWith("marked:")) {
+            throw new ParseException("'item' must be marked:N (there is no pivot before crafting), got '" + item + "'");
+        }
+        RecipeCondition.Operator operator = RecipeCondition.Operator.fromSymbol(operatorSymbol);
+        if (operator == null) {
+            throw new ParseException("'operator' is '" + operatorSymbol + "', expected one of ==, !=, <, >, <=, >=");
+        }
+        return new RecipeCondition(item, check, operator, value);
+    }
+
+    private static String require(Map<?, ?> entry, String key, String hint) throws ParseException {
+        Object raw = entry.get(key);
+        String value = raw == null ? "" : String.valueOf(raw).trim();
+        if (value.isEmpty()) {
+            throw new ParseException("missing '" + key + "'" + (hint == null ? "" : " (" + hint + ")"));
+        }
+        return value;
     }
 }
