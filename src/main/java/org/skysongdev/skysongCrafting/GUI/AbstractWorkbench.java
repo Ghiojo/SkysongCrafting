@@ -14,7 +14,6 @@ import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
-import org.skysongdev.skysongCrafting.data.recipe.ConditionalShapedRecipeInstance;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import org.skysongdev.skysongCrafting.events.CraftingEvent;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
@@ -96,14 +95,20 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             inventory.setItem(craftingButtonLocation, noSkillItem);
             return;
         }
-        if(foundRecipes.get(recipeIndex) instanceof ConditionalShapedRecipeInstance){
-            ConditionalShapedRecipeInstance conditionalRecipe = (ConditionalShapedRecipeInstance) foundRecipes.get(recipeIndex);
-            if(!conditionalRecipe.doesMeetConditions(inputSlotReferences, inventory)){
-                inventory.setItem(craftingButtonLocation, GUIUtils.Instance().GUI_CRAFT_CONDITIONS_NOT_MET_BUTTON);
-                return;
-            }
+        String conditionFailure = foundRecipes.get(recipeIndex).checkConditions(inputSlotReferences, inventory);
+        if(conditionFailure != null){
+            ItemStack button = new ItemStack(GUIUtils.Instance().GUI_CRAFT_CONDITIONS_NOT_MET_BUTTON);
+            ItemMeta meta = button.getItemMeta();
+            List<Component> lore = new ArrayList<>(meta.lore() == null ? List.of() : meta.lore());
+            lore.add(SkysongCrafting.GetMM().deserialize("<gray>" + conditionFailure).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
+            meta.lore(lore);
+            button.setItemMeta(meta);
+            inventory.setItem(craftingButtonLocation, button);
+            return;
         }
-        if(!Objects.equals(foundRecipes.get(recipeIndex).getCraftingTableType(), type) || Objects.equals(foundRecipes.get(recipeIndex).getCraftingTableType(), "ANY")){
+        // "ANY" means the recipe can be crafted on any workbench type. (The old condition had this inverted.)
+        String requiredTable = foundRecipes.get(recipeIndex).getCraftingTableType();
+        if(!Objects.equals(requiredTable, type) && !"ANY".equalsIgnoreCase(requiredTable)){
             inventory.setItem(craftingButtonLocation, GUIUtils.Instance().GUI_CRAFT_WRONG_WORKBENCH_BUTTON);
             return;
         }
@@ -141,6 +146,13 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             return;
         RecipeInstance recipe = foundRecipes.get(recipeIndex);
 
+        // Re-check conditions at craft time: the grid may have changed since the button was drawn.
+        String conditionFailure = recipe.checkConditions(inputSlotReferences, inventory);
+        if(conditionFailure != null){
+            player.sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<red>Could not craft: <gray>" + conditionFailure));
+            return;
+        }
+
         ArrayList<MarkedItem> markedItems = recipe.collectMarkedItems(inputSlotReferences, inventory);
 
         ArrayList<ItemStack> results = new ArrayList<>();
@@ -161,7 +173,7 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             return;
         }
 
-        Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, inputSlotReferences, outputSlotReferences, player, inventory));
+        Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, results, inputSlotReferences, outputSlotReferences, player, inventory));
         recipe.ConsumeMaterials(inputSlotReferences, inventory);
 
         for(ItemStack newItem : results){

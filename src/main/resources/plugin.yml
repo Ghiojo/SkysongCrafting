@@ -15,7 +15,7 @@ permissions:
   skysongcrafting.management.reload:
     description: Allows reloading of SkysongCrafting configuration files
     default: op
-  skysongcrafting.management.forceclose:
+  skysongcrafting.management.forcecloseinventories:
     description: Allows force closing of all open inventories
     default: op
   skysongcrafting.management.*:
@@ -23,14 +23,14 @@ permissions:
     default: op
     children:
       skysongcrafting.management.reload: true
-      skysongcrafting.management.forceclose: true
+      skysongcrafting.management.forcecloseinventories: true
   skysongcrafting.workbench.create:
     description: Allows creation of workbenches
     default: op
   skysongcrafting.workbench.delete:
     description: Allows deletion of workbenches
     default: op
-  skysongrafting.workbench.addmember:
+  skysongcrafting.workbench.addmember:
     description: Allows adding members to workbenches
     default: op
   skysongcrafting.workbench.addmember.others:
@@ -69,9 +69,23 @@ permissions:
       skysongcrafting.workbench.togglepublic: true
       skysongcrafting.workbench.togglepublic.others: true
 
+  skysongcrafting.workstation.use.bypass:
+    description: Allows using private workstations owned by other players
+    default: op
+  skysongcrafting.workstation.destroy.others:
+    description: Allows breaking workstations owned by other players
+    default: op
+  skysongcrafting.workstation.*:
+    description: Gives access to all workstation bypass permissions
+    default: op
+    children:
+      skysongcrafting.workstation.use.bypass: true
+      skysongcrafting.workstation.destroy.others: true
+
   skysongcrafting.*:
     description: Gives access to all SkysongCrafting commands and features
     default: op
     children:
       skysongcrafting.management.*: true
       skysongcrafting.workbench.*: true
+      skysongcrafting.workstation.*: true

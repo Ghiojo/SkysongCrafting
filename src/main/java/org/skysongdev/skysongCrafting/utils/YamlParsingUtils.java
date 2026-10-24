@@ -136,6 +136,8 @@ public class YamlParsingUtils {
         Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputType + "| result is:  " + output.getOutputItems().toString());
         String tableType = YamlConfiguration.loadConfiguration(file).getString("table_type", "NONE");
         String name = YamlConfiguration.loadConfiguration(file).getString("name", "Unnamed Recipe");
+        List<RecipeCondition> conditions = RecipeConditionParser.parse(file, YamlConfiguration.loadConfiguration(file));
+        if(conditions == null) return; // malformed; already warned
         switch(recipeType){
             case "SHAPED":
                 ArrayList<?> pattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getList("pattern"));
@@ -148,33 +150,37 @@ public class YamlParsingUtils {
                     }
                 }
 
-                List<List<String>> combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(new ArrayList<>(pattern1D));
+                List<ConsumptionRule> slotRules = consumptionRules(pattern1D);
+                List<List<String>> combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(pattern1D));
 
                 for (List<String> combination : combinations) {
                     ArrayList<String> key = new ArrayList<>(combination);
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapedRecipeMap()
                             .computeIfAbsent(key, k -> new ArrayList<>());
-                    list.add(new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements));
+                    ShapedRecipeInstance recipe = new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements);
+                    recipe.setSlotRules(slotRules);
+                    list.add(withConditions(recipe, conditions));
                 }
                 return;
             case "SHAPELESS":
                 ArrayList<String> inputs = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getStringList("inputs"));
 
-                List<List<String>> combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(inputs);
+                List<ConsumptionRule> inputRules = consumptionRules(inputs);
+                List<List<String>> combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(inputs));
 
-                ArrayList<ArrayList<MaterialCount>> inputMaterialCounts = new ArrayList<>();
                 for (List<String> combination : combinationsShapeless) {
+                    Map<String, ConsumptionRule> rulesById = shapelessRulesById(combination, inputRules, file);
+                    if (rulesById == null) return; // conflicting rules; already warned
                     ArrayList<MaterialCount> materialCounts = Instance().inputToMaterialCountList(new ArrayList<>(combination));
                     materialCounts.sort(Comparator.comparing(mc -> mc.getId().toLowerCase()));
-                    inputMaterialCounts.add(materialCounts);
-                }
 
-                for(ArrayList<MaterialCount> materialCounts : inputMaterialCounts){
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapelessRecipeMap()
                             .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    list.add(new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements));
+                    ShapelessRecipeInstance recipe = new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements);
+                    recipe.setRulesById(rulesById);
+                    list.add(withConditions(recipe, conditions));
                     Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
                     for(MaterialCount mc : materialCounts){
                         Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
@@ -193,34 +199,38 @@ public class YamlParsingUtils {
                     }
                 }
 
-                combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(new ArrayList<>(pattern1D));
+                slotRules = consumptionRules(pattern1D);
+                combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(pattern1D));
 
                 for (List<String> combination : combinations) {
                     ArrayList<String> key = new ArrayList<>(combination);
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapedRecipeMap()
                             .computeIfAbsent(key, k -> new ArrayList<>());
-                    list.add(new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern));
+                    ShapedMarkingRecipeInstance recipe = new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern);
+                    recipe.setSlotRules(slotRules);
+                    list.add(withConditions(recipe, conditions));
                 }
                 return;
             case "SHAPELESS_MARKING":
                 markingPattern = readMarkingPattern(YamlConfiguration.loadConfiguration(file));
                 inputs = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getStringList("inputs"));
 
-                combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(inputs);
+                inputRules = consumptionRules(inputs);
+                combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(inputs));
 
-                inputMaterialCounts = new ArrayList<>();
                 for (List<String> combination : combinationsShapeless) {
+                    Map<String, ConsumptionRule> rulesById = shapelessRulesById(combination, inputRules, file);
+                    if (rulesById == null) return; // conflicting rules; already warned
                     ArrayList<MaterialCount> materialCounts = Instance().inputToMaterialCountList(new ArrayList<>(combination));
                     materialCounts.sort(Comparator.comparing(mc -> mc.getId().toLowerCase()));
-                    inputMaterialCounts.add(materialCounts);
-                }
 
-                for(ArrayList<MaterialCount> materialCounts : inputMaterialCounts){
                     ArrayList<RecipeInstance> list = Instance()
                             .getShapelessRecipeMap()
                             .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    list.add(new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern));
+                    ShapelessMarkingRecipeInstance recipe = new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern);
+                    recipe.setRulesById(rulesById);
+                    list.add(withConditions(recipe, conditions));
                     Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
                     for(MaterialCount mc : materialCounts){
                         Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
@@ -230,6 +240,47 @@ public class YamlParsingUtils {
             default:
                 return;
         }
+    }
+
+    /** One {@link ConsumptionRule} per ingredient token, in order. */
+    static List<ConsumptionRule> consumptionRules(List<String> tokens){
+        List<ConsumptionRule> rules = new ArrayList<>();
+        for(String token : tokens) rules.add(ConsumptionRule.parse(token));
+        return rules;
+    }
+
+    /** The ingredient tokens without their consumption suffixes (tags and *N counts untouched). */
+    static ArrayList<String> stripConsumption(List<String> tokens){
+        ArrayList<String> stripped = new ArrayList<>();
+        for(String token : tokens) stripped.add(ConsumptionRule.strip(token));
+        return stripped;
+    }
+
+    /**
+     * Shapeless rules are per crafting id: every slot holding that id is consumed the same way.
+     * Returns {@code null} (after a warning) when the same id is listed with two different rules.
+     */
+    static Map<String, ConsumptionRule> shapelessRulesById(List<String> combination, List<ConsumptionRule> rules, File file){
+        Map<String, ConsumptionRule> byId = new HashMap<>();
+        for(int i = 0; i < combination.size(); i++){
+            String id = combination.get(i).split("\\*", 2)[0].trim().toLowerCase(Locale.ROOT);
+            if(id.isEmpty()) continue;
+            ConsumptionRule rule = i < rules.size() ? rules.get(i) : ConsumptionRule.CONSUME_ONE;
+            ConsumptionRule existing = byId.get(id);
+            if(existing != null && !existing.equals(rule)){
+                SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " lists ingredient '" + id
+                        + "' twice with different consumption rules (" + existing + " and " + rule
+                        + "). In a shapeless recipe every slot of the same ingredient is consumed the same way. Recipe not loaded.");
+                return null;
+            }
+            byId.put(id, rule);
+        }
+        return byId;
+    }
+
+    private static RecipeInstance withConditions(RecipeInstance recipe, List<RecipeCondition> conditions){
+        recipe.setConditions(conditions);
+        return recipe;
     }
 
     /**

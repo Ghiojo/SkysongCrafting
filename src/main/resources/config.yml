@@ -5,4 +5,5 @@ database:
   password: ""
   database_name: "book_descriptions"
 
-crafting_id: "material_id"
+# SkysongItems tag whose value identifies an ingredient in recipe patterns.
+crafting_key: "material_id"

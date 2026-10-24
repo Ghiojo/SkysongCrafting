@@ -69,17 +69,46 @@ Branch: `feature/composite-engine` (based on `master` @ 2a3e93f).
   `readMarkingPattern`. Run with `gradlew test`; `gradlew build -x test` skips them.
   Item/step logic needs a server (or MockBukkit) and is not unit-tested.
 
-## Milestone 2 — recipe side + corrections (planned)
-- Conditional recipes loadable from YAML (`conditions:` on marking recipes), indexed by marked
-  position; empty marked slot should fail the condition.
-- `config.yml` ships `crafting_id` but the code reads `crafting_key` (key is effectively always
-  `material_id`); align the two.
-- `workstations.yml` not copied on first run; UUID `!=` comparisons in `WorkstationListener`;
-  permission-name mismatches with `plugin.yml`; DB row deleted before the break-permission check;
-  `RandomIdListener` fires before outputs exist; `ReloadCommand` casts console to `Player`.
-- Load-time warning for tags unknown to SkysongItems.
+## Milestone 2 — recipe side + corrections (verified in-game 2026-10-24; awaiting PR approval)
 
-## Milestone 3 — Paper 1.21.11.
+Branch: `feature/recipe-conditions-and-fixes` (off `master` @ eec7013). One commit per item.
+
+### Done in this batch
+- Workstation owner checks use `equals` (were `!=` on UUIDs); break-permission check before the
+  DB delete; breaking removes only that world's reference.
+- `workstations.yml` copied on first run (listed a non-existent folder; single-file skip rule fixed);
+  `config.yml` key renamed to `crafting_key` (what the code reads).
+- `plugin.yml` nodes aligned with the code (`skysongrafting` typo, `forcecloseinventories`,
+  `workstation.use.bypass`, `workstation.destroy.others` declared).
+- `CraftingEvent` carries the result stacks; `RandomIdListener` sets ids on them before placement
+  (every result with an empty id gets its own UUID).
+- `/sc reload` console-safe, reuses `InitializeFiles()`.
+- Recipe conditions (`conditions:` list, any recipe type, marked-position indexing, evaluated via
+  `PlaceholderParser`, re-checked at craft time, reason shown in button lore).
+  `ConditionalShapedRecipeInstance` removed. Placeholders: `material`, `amount`.
+  Inverted `table_type: ANY` check fixed.
+- Consumption suffixes: `item^N` (charges) now works (was part of the match key, so it never
+  matched); `item!keep` / `item^0` added; both work in shapeless `inputs`, one rule per ingredient
+  id (conflicting duplicates refuse the recipe). Shared `RecipeInstance.consumeSlot`.
+- `docs/RECIPE_FORMAT.md` added. Tests: `RecipeConditionTest`, `RecipeConditionParserTest`,
+  `ConsumptionRuleTest` (37 tests in total).
+
+### Checks performed
+- `javac` syntax pass (Paper API unavailable to the assistant).
+- Owner: `gradlew test` 37 passed; in-game (2026-10-24) conditions (button lore + craft-time
+  refusal), `^N` charges, `!keep`, shapeless `*2^1` and the conflicting-duplicate refusal,
+  `table_type: ANY`, `/sc reload` from console, `workstations.yml` on first run, owner access to
+  private workstations, break refusal, random_id ids — all behaved as specified.
+
+## Milestone 3 — Paper 1.21.11 (next)
+- Bump `paper-api` in build.gradle (compile + test), check `CustomModelDataComponent`,
+  `Registry.SOUND_EVENT`, `setItemModel`, `getItemName` against the 1.21.11 API, rebuild, re-run
+  the T1-T8 test set.
+
+## Later / optional
+- Shapeless conditional recipes already covered (conditions work on any recipe type).
+- Composite steps for name/lore editing, if wanted.
+- MockBukkit for step-level unit tests, if wanted (new test dependency).
 
 ## Open questions for the owner
 - Shapeless conditional recipes wanted?

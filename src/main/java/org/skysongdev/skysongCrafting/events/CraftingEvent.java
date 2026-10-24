@@ -4,14 +4,21 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 
 import java.util.List;
 
+/**
+ * Fired once a recipe's output has been produced, before the ingredients are consumed and before
+ * the results are placed. {@link #getResults()} holds the exact stacks that will be placed, so
+ * listeners can edit them in place (the random-id listener does this).
+ */
 public class CraftingEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
     private final RecipeInstance recipe;
+    private final List<ItemStack> results;
     private final List<Integer> inputSlotReferences;
     private final List<Integer> outputSlotReferences;
     private final Player player;
@@ -21,8 +28,9 @@ public class CraftingEvent extends Event {
         return inventory;
     }
 
-    public CraftingEvent(RecipeInstance recipe, List<Integer> inputSlotReferences, List<Integer> outputSlotReferences, Player player, Inventory inventory) {
+    public CraftingEvent(RecipeInstance recipe, List<ItemStack> results, List<Integer> inputSlotReferences, List<Integer> outputSlotReferences, Player player, Inventory inventory) {
         this.recipe = recipe;
+        this.results = results;
         this.inputSlotReferences = inputSlotReferences;
         this.outputSlotReferences = outputSlotReferences;
         this.player = player;
@@ -31,6 +39,11 @@ public class CraftingEvent extends Event {
 
     public RecipeInstance getRecipe() {
         return recipe;
+    }
+
+    /** The result stacks about to be placed; edits made here end up in the output slots. */
+    public List<ItemStack> getResults() {
+        return results;
     }
 
     public List<Integer> getInputSlotReferences() {
