@@ -41,16 +41,13 @@ public class YamlParsingUtils {
                     SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
                     continue;
                 }
-                SkysongItemWithAmmount item = new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), number);
-                Bukkit.getLogger().info("Loading output item: " + itemID + " with amount " + number);
-                itemStacks.add(item);
+                itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), number));
             } else {
                 File itemFile = resolveItemFile(itemID);
                 if(itemFile == null){
                     SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
                     continue;
                 }
-                Bukkit.getLogger().info("Loading output item: " + itemID);
                 itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), 1));
             }
 
@@ -123,7 +120,8 @@ public class YamlParsingUtils {
                 registerShapeless(file, yaml, output, icon, name, tableType, sound, skillRequirements, conditions, readMarkingPattern(yaml));
                 return;
             default:
-                return;
+                SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " has unknown recipe_type '" + recipeType
+                        + "' (expected SHAPED, SHAPELESS, SHAPED_MARKING or SHAPELESS_MARKING). Recipe not loaded.");
         }
     }
 
@@ -135,7 +133,6 @@ public class YamlParsingUtils {
                 org.skysongdev.skysongstats.Utils.Utils.Skills skillEnum = org.skysongdev.skysongstats.Utils.Utils.Skills.valueOf(skillParts[0].toUpperCase());
                 int level = Integer.parseInt(skillParts[1]);
                 skillRequirements.put(skillEnum, level);
-                Bukkit.getLogger().info("Added skill requirement for recipe " + file.getName() + ": " + skillEnum + " level " + level);
             } catch (Exception e){
                 SkysongCrafting.Instance().getLogger().warning("Skill " + skill + " does not exist! (File: " + file.getName() + ")");
                 Bukkit.getLogger().warning(e.getMessage());
@@ -168,7 +165,6 @@ public class YamlParsingUtils {
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " not loaded because its output '" + outputFile.getName() + "' failed to load (see warnings above).");
             return null;
         }
-        Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputType + "| result is:  " + output.getOutputItems().toString());
         return output;
     }
 
@@ -234,10 +230,6 @@ public class YamlParsingUtils {
             recipe.setRulesById(rulesById);
             recipe.setConditions(conditions);
             Instance().getShapelessRecipeMap().computeIfAbsent(materialCounts, k -> new ArrayList<>()).add(recipe);
-            Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
-            for(MaterialCount mc : materialCounts){
-                Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
-            }
         }
     }
 
@@ -308,7 +300,6 @@ public class YamlParsingUtils {
             String icon = config.getString(key + ".icon");
             String guiType  = config.getString(key + ".gui_layout", "WORKBENCH").toUpperCase();
             Workstation workstation = new Workstation(name, icon, WorkbenchGUIType.valueOf(guiType), key);
-            Bukkit.getLogger().info("Initialized workstation: " + name + " of type " + guiType + " with key " + key);
             Instance().getWorkstationTypes().put(key, workstation);
         }
     }

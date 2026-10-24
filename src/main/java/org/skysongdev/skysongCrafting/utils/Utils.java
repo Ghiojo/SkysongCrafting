@@ -1,6 +1,5 @@
 package org.skysongdev.skysongCrafting.utils;
 
-import org.bukkit.Bukkit;
 import org.skysongdev.skysongCrafting.data.MaterialCount;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import org.skysongdev.skysongCrafting.data.workstations.Workstation;
@@ -136,10 +135,6 @@ public class Utils {
                 }
             }
             combinations = newCombinations;
-        }
-
-        for(List<String> combo : combinations){
-            Bukkit.getLogger().info("Generated combination: " + combo);
         }
 
         return combinations;

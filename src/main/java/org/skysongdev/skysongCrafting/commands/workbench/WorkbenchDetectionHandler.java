@@ -1,6 +1,5 @@
 package org.skysongdev.skysongCrafting.commands.workbench;
 
-import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
@@ -23,7 +22,6 @@ public class WorkbenchDetectionHandler {
         ArrayList<Integer> location = new ArrayList<>(List.of(targetBlock.getLocation().toBlockLocation().getBlockX(),
                 targetBlock.getLocation().toBlockLocation().getBlockY(),
                 targetBlock.getLocation().toBlockLocation().getBlockZ()));
-        Bukkit.getLogger().info("Attempted to detect workbench at location: " + location);
         ArrayList<WorkstationReference> existingRefs = Utils.getWorkstationReferences().get(location);
         WorkstationReference ref = Utils.Instance().getWorkstationReferenceByWorld(existingRefs, player.getWorld().getName().toString());
         if (ref == null) {

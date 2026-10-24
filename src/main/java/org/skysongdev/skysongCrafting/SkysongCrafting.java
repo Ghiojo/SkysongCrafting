@@ -70,8 +70,10 @@ public final class SkysongCrafting extends JavaPlugin {
             e.printStackTrace();
         }
 
-        Bukkit.getLogger().info("WorkstationReferences loaded: " + Utils.getWorkstationReferences().size());
-        Bukkit.getLogger().info("WorkstationReferences details: " + Utils.getWorkstationReferences().toString());
+        getLogger().info("Loaded " + Utils.Instance().getWorkstationTypes().size() + " workstation type(s), "
+                + Utils.getWorkstationReferences().size() + " placed workstation(s), "
+                + Utils.Instance().getShapedRecipeMap().size() + " shaped and "
+                + Utils.Instance().getShapelessRecipeMap().size() + " shapeless recipe key(s).");
     }
 
     public void InitializeDatabase(){
