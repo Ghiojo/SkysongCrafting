@@ -100,10 +100,18 @@ Branch: `feature/recipe-conditions-and-fixes` (off `master` @ eec7013). One comm
   `table_type: ANY`, `/sc reload` from console, `workstations.yml` on first run, owner access to
   private workstations, break refusal, random_id ids — all behaved as specified.
 
-## Milestone 3 — Paper 1.21.11 (next)
-- Bump `paper-api` in build.gradle (compile + test), check `CustomModelDataComponent`,
-  `Registry.SOUND_EVENT`, `setItemModel`, `getItemName` against the 1.21.11 API, rebuild, re-run
-  the T1-T8 test set.
+## Milestone 3 — small single-purpose PRs (in progress)
+
+Working agreement from here: one PR = one change (or one family), small enough to review in
+minutes; refactors never mixed with behaviour changes.
+
+1. Paper 1.21.11 — `chore/paper-1.21.11`: version bump only; API fixes follow the owner's
+   compile output. Re-run the T1-T8 test set after the build.
+2. Recipe loader de-duplication (pure refactor of `initializeRecipeInstance`).
+3. Startup log noise to debug / removed.
+4. `README.md` linking the format docs.
+5. Per-player workbench GUIs (today one inventory is shared per placed workstation).
+6. Tag-expansion guard (optional).
 
 ## Later / optional
 - Shapeless conditional recipes already covered (conditions work on any recipe type).
