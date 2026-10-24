@@ -95,11 +95,41 @@ public class YamlParsingUtils {
     }
 
     public static void initializeRecipeInstance(File file){
-        String recipeType = YamlConfiguration.loadConfiguration(file).getString("recipe_type", "NONE").toUpperCase();
-        Material icon =  Material.valueOf(YamlConfiguration.loadConfiguration(file).getString("icon", "RED_WOOL"));
-        String sound = YamlConfiguration.loadConfiguration(file).getString("sound", "ENTITY_VILLAGER_WORK_TOOLSMITH");
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        String recipeType = yaml.getString("recipe_type", "NONE").toUpperCase();
+        Material icon = Material.valueOf(yaml.getString("icon", "RED_WOOL"));
+        String sound = yaml.getString("sound", "ENTITY_VILLAGER_WORK_TOOLSMITH");
+        Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements = readSkillRequirements(file, yaml);
+
+        OutputInstance output = loadOutput(file, yaml);
+        if(output == null) return; // already warned
+
+        String tableType = yaml.getString("table_type", "NONE");
+        String name = yaml.getString("name", "Unnamed Recipe");
+        List<RecipeCondition> conditions = RecipeConditionParser.parse(file, yaml);
+        if(conditions == null) return; // malformed; already warned
+
+        switch(recipeType){
+            case "SHAPED":
+                registerShaped(file, yaml, output, icon, name, tableType, sound, skillRequirements, conditions, null);
+                return;
+            case "SHAPED_MARKING":
+                registerShaped(file, yaml, output, icon, name, tableType, sound, skillRequirements, conditions, readMarkingPattern(yaml));
+                return;
+            case "SHAPELESS":
+                registerShapeless(file, yaml, output, icon, name, tableType, sound, skillRequirements, conditions, null);
+                return;
+            case "SHAPELESS_MARKING":
+                registerShapeless(file, yaml, output, icon, name, tableType, sound, skillRequirements, conditions, readMarkingPattern(yaml));
+                return;
+            default:
+                return;
+        }
+    }
+
+    private static Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> readSkillRequirements(File file, YamlConfiguration yaml){
         Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements = new HashMap<>();
-        for(String skill : YamlConfiguration.loadConfiguration(file).getStringList("skill_requirements")){
+        for(String skill : yaml.getStringList("skill_requirements")){
             try{
                 String[] skillParts = skill.split(":");
                 org.skysongdev.skysongstats.Utils.Utils.Skills skillEnum = org.skysongdev.skysongstats.Utils.Utils.Skills.valueOf(skillParts[0].toUpperCase());
@@ -111,134 +141,103 @@ public class YamlParsingUtils {
                 Bukkit.getLogger().warning(e.getMessage());
             }
         }
-        String[] outputString = YamlConfiguration.loadConfiguration(file).getString("output", "NONE").split(":");
+        return skillRequirements;
+    }
+
+    /** Resolves and parses the recipe's {@code output: "type:file"}; {@code null} (after a warning) if it cannot be used. */
+    private static OutputInstance loadOutput(File file, YamlConfiguration yaml){
+        String[] outputString = yaml.getString("output", "NONE").split(":");
         if(outputString.length < 2 || outputString[0].isEmpty() || outputString[1].isEmpty()){
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " does not have an output string!");
-            return;
+            return null;
         }
         OutputType outputType;
         try {
             outputType = OutputType.valueOf(outputString[0].toUpperCase());
         } catch (IllegalArgumentException e) {
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " has unknown output type '" + outputString[0] + "' (expected basic, random, random_id or composite). Recipe not loaded.");
-            return;
+            return null;
         }
         File outputFile = resolveYamlFile(OUTPUT_PATH.resolve(outputString[0].toLowerCase()), outputString[1]);
         if(outputFile == null){
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " references output '" + outputString[0] + ":" + outputString[1] + "' but no such file exists. Recipe not loaded.");
-            return;
+            return null;
         }
         OutputInstance output = parseOutputInstance(outputFile, outputType);
         if(output == null){
             SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " not loaded because its output '" + outputFile.getName() + "' failed to load (see warnings above).");
-            return;
+            return null;
         }
         Bukkit.getLogger().info("Parsed output for recipe " + file.getName() + " as type " + outputType + "| result is:  " + output.getOutputItems().toString());
-        String tableType = YamlConfiguration.loadConfiguration(file).getString("table_type", "NONE");
-        String name = YamlConfiguration.loadConfiguration(file).getString("name", "Unnamed Recipe");
-        List<RecipeCondition> conditions = RecipeConditionParser.parse(file, YamlConfiguration.loadConfiguration(file));
-        if(conditions == null) return; // malformed; already warned
-        switch(recipeType){
-            case "SHAPED":
-                ArrayList<?> pattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getList("pattern"));
-                ArrayList<String> pattern1D = new ArrayList<>();
-                for(Object row : pattern){
-                    if(row instanceof ArrayList){
-                        for(String col : (ArrayList<String>) row){
-                            pattern1D.add(col);
-                        }
-                    }
-                }
+        return output;
+    }
 
-                List<ConsumptionRule> slotRules = consumptionRules(pattern1D);
-                List<List<String>> combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(pattern1D));
+    /** Flattens the 5x5 {@code pattern} rows into one list of 25 ingredient tokens; {@code null} if the key is missing. */
+    private static ArrayList<String> readPattern(YamlConfiguration yaml){
+        List<?> rows = yaml.getList("pattern");
+        if(rows == null) return null;
+        ArrayList<String> pattern1D = new ArrayList<>();
+        for(Object row : rows){
+            if(row instanceof List<?> cells){
+                for(Object cell : cells) pattern1D.add(cell == null ? "" : String.valueOf(cell));
+            }
+        }
+        return pattern1D;
+    }
 
-                for (List<String> combination : combinations) {
-                    ArrayList<String> key = new ArrayList<>(combination);
-                    ArrayList<RecipeInstance> list = Instance()
-                            .getShapedRecipeMap()
-                            .computeIfAbsent(key, k -> new ArrayList<>());
-                    ShapedRecipeInstance recipe = new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements);
-                    recipe.setSlotRules(slotRules);
-                    list.add(withConditions(recipe, conditions));
-                }
-                return;
-            case "SHAPELESS":
-                ArrayList<String> inputs = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getStringList("inputs"));
+    /**
+     * Registers a shaped recipe under every tag combination of its pattern.
+     * @param markingPattern {@code null} for a plain SHAPED recipe, the marks for SHAPED_MARKING
+     */
+    private static void registerShaped(File file, YamlConfiguration yaml, OutputInstance output, Material icon, String name,
+                                       String tableType, String sound, Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements,
+                                       List<RecipeCondition> conditions, ArrayList<Boolean> markingPattern){
+        ArrayList<String> pattern1D = readPattern(yaml);
+        if(pattern1D == null){
+            SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + " has no 'pattern'. Recipe not loaded.");
+            return;
+        }
+        List<ConsumptionRule> slotRules = consumptionRules(pattern1D);
+        List<List<String>> combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(pattern1D));
 
-                List<ConsumptionRule> inputRules = consumptionRules(inputs);
-                List<List<String>> combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(inputs));
+        for (List<String> combination : combinations) {
+            ArrayList<String> key = new ArrayList<>(combination);
+            ShapedRecipeInstance recipe = markingPattern == null
+                    ? new ShapedRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements)
+                    : new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern);
+            recipe.setSlotRules(slotRules);
+            recipe.setConditions(conditions);
+            Instance().getShapedRecipeMap().computeIfAbsent(key, k -> new ArrayList<>()).add(recipe);
+        }
+    }
 
-                for (List<String> combination : combinationsShapeless) {
-                    Map<String, ConsumptionRule> rulesById = shapelessRulesById(combination, inputRules, file);
-                    if (rulesById == null) return; // conflicting rules; already warned
-                    ArrayList<MaterialCount> materialCounts = Instance().inputToMaterialCountList(new ArrayList<>(combination));
-                    materialCounts.sort(Comparator.comparing(mc -> mc.getId().toLowerCase()));
+    /**
+     * Registers a shapeless recipe under every tag combination of its inputs.
+     * @param markingPattern {@code null} for a plain SHAPELESS recipe, the marks for SHAPELESS_MARKING
+     */
+    private static void registerShapeless(File file, YamlConfiguration yaml, OutputInstance output, Material icon, String name,
+                                          String tableType, String sound, Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements,
+                                          List<RecipeCondition> conditions, ArrayList<Boolean> markingPattern){
+        ArrayList<String> inputs = new ArrayList<>(yaml.getStringList("inputs"));
+        List<ConsumptionRule> inputRules = consumptionRules(inputs);
+        List<List<String>> combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(inputs));
 
-                    ArrayList<RecipeInstance> list = Instance()
-                            .getShapelessRecipeMap()
-                            .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    ShapelessRecipeInstance recipe = new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements);
-                    recipe.setRulesById(rulesById);
-                    list.add(withConditions(recipe, conditions));
-                    Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
-                    for(MaterialCount mc : materialCounts){
-                        Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
-                    }
-                }
-                return;
-            case "SHAPED_MARKING":
-                ArrayList<Boolean> markingPattern = readMarkingPattern(YamlConfiguration.loadConfiguration(file));
-                pattern = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getList("pattern"));
-                pattern1D = new ArrayList<>();
-                for(Object row : pattern){
-                    if(row instanceof ArrayList){
-                        for(String col : (ArrayList<String>) row){
-                            pattern1D.add(col);
-                        }
-                    }
-                }
+        for (List<String> combination : combinations) {
+            Map<String, ConsumptionRule> rulesById = shapelessRulesById(combination, inputRules, file);
+            if (rulesById == null) return; // conflicting rules; already warned
+            ArrayList<MaterialCount> materialCounts = Instance().inputToMaterialCountList(new ArrayList<>(combination));
+            materialCounts.sort(Comparator.comparing(mc -> mc.getId().toLowerCase()));
 
-                slotRules = consumptionRules(pattern1D);
-                combinations = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(pattern1D));
-
-                for (List<String> combination : combinations) {
-                    ArrayList<String> key = new ArrayList<>(combination);
-                    ArrayList<RecipeInstance> list = Instance()
-                            .getShapedRecipeMap()
-                            .computeIfAbsent(key, k -> new ArrayList<>());
-                    ShapedMarkingRecipeInstance recipe = new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern);
-                    recipe.setSlotRules(slotRules);
-                    list.add(withConditions(recipe, conditions));
-                }
-                return;
-            case "SHAPELESS_MARKING":
-                markingPattern = readMarkingPattern(YamlConfiguration.loadConfiguration(file));
-                inputs = new ArrayList<>(YamlConfiguration.loadConfiguration(file).getStringList("inputs"));
-
-                inputRules = consumptionRules(inputs);
-                combinationsShapeless = org.skysongdev.skysongCrafting.utils.Utils.generateTagCombinations(stripConsumption(inputs));
-
-                for (List<String> combination : combinationsShapeless) {
-                    Map<String, ConsumptionRule> rulesById = shapelessRulesById(combination, inputRules, file);
-                    if (rulesById == null) return; // conflicting rules; already warned
-                    ArrayList<MaterialCount> materialCounts = Instance().inputToMaterialCountList(new ArrayList<>(combination));
-                    materialCounts.sort(Comparator.comparing(mc -> mc.getId().toLowerCase()));
-
-                    ArrayList<RecipeInstance> list = Instance()
-                            .getShapelessRecipeMap()
-                            .computeIfAbsent(materialCounts, k -> new ArrayList<>());
-                    ShapelessMarkingRecipeInstance recipe = new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern);
-                    recipe.setRulesById(rulesById);
-                    list.add(withConditions(recipe, conditions));
-                    Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
-                    for(MaterialCount mc : materialCounts){
-                        Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
-                    }
-                }
-                return;
-            default:
-                return;
+            ShapelessRecipeInstance recipe = markingPattern == null
+                    ? new ShapelessRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements)
+                    : new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern);
+            recipe.setRulesById(rulesById);
+            recipe.setConditions(conditions);
+            Instance().getShapelessRecipeMap().computeIfAbsent(materialCounts, k -> new ArrayList<>()).add(recipe);
+            Bukkit.getLogger().info("Registered shapeless recipe: " + name + " with inputs: ");
+            for(MaterialCount mc : materialCounts){
+                Bukkit.getLogger().info(" - " + mc.getId() + " x" + mc.getCount());
+            }
         }
     }
 
@@ -276,11 +275,6 @@ public class YamlParsingUtils {
             byId.put(id, rule);
         }
         return byId;
-    }
-
-    private static RecipeInstance withConditions(RecipeInstance recipe, List<RecipeCondition> conditions){
-        recipe.setConditions(conditions);
-        return recipe;
     }
 
     /**
