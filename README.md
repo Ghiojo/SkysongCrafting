@@ -34,8 +34,8 @@ plugin's data folder on first run.
 ```
 
 SkysongCrafting compiles against the public APIs of SkysongItems and SkysongStats, which JitPack
-publishes from their repositories (`com.github.Ghiojo.Skysong-Special-Items:api:1.0.0`,
-`com.github.Ghiojo.SkysongStats:api:1.0.0`). The output jar is in `build/libs/`.
+publishes from their repositories (`com.github.Ghiojo:Skysong-Special-Items:1.0.1`,
+`com.github.Ghiojo:SkysongStats:1.0.0`). The output jar is in `build/libs/`.
 
 ## Commands
 
