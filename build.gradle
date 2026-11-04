@@ -29,14 +29,14 @@ repositories {
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
     // Only the public APIs: both plugins are installed on the server (plugin.yml depend).
-    compileOnly "com.github.Ghiojo.Skysong-Special-Items:api:1.0.0"
-    compileOnly "com.github.Ghiojo.SkysongStats:api:1.0.0"
+    compileOnly "com.github.Ghiojo:Skysong-Special-Items:1.0.1"
+    compileOnly "com.github.Ghiojo:SkysongStats:1.0.0"
 
     // Unit tests cover the pure parts (template parsing, recipe-key helpers).
     // paper-api is needed at test time for YamlConfiguration; no server is started.
     testImplementation "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
-    testImplementation "com.github.Ghiojo.Skysong-Special-Items:api:1.0.0"
-    testImplementation "com.github.Ghiojo.SkysongStats:api:1.0.0"
+    testImplementation "com.github.Ghiojo:Skysong-Special-Items:1.0.1"
+    testImplementation "com.github.Ghiojo:SkysongStats:1.0.0"
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
