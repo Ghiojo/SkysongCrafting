@@ -12,7 +12,7 @@ output_strings:
 steps:
   - type: fetch
     fetch_type: marked            # marked | generated
-    fetch_id: "0"                 # marked index, or an item file name when generated
+    fetch_id: "0"                 # marked index, or a SkysongItems saved item id when generated
 
   - type: cmd
     cmd_type: color               # float | string | boolean | color

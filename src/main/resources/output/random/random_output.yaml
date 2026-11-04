@@ -1,4 +1,5 @@
-# The name of the item files (minus the .yaml) of the items that should be included in the items folder.
+# SkysongItems saved items, by the id /si loaditem takes (e.g. "sword", or "weapons/sword" for one saved in a folder).
+# Save them in-game with /si saveitem. Each craft creates a fresh copy of the saved item.
 # For multiple items in the same roll, use *(number) at the end (e.g. item1*3 for 3 of item1).
 # You can also just add the same item multiple times with different amounts without issue.
 output_items:

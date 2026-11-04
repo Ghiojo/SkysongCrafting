@@ -2,7 +2,7 @@ package org.skysongdev.skysongCrafting.data.output.data;
 
 import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.ResultItem;
 
 import java.util.ArrayList;
 
@@ -18,9 +18,9 @@ import java.util.ArrayList;
 public class StepData {
     private ArrayList<MarkedItem> markedItems;
     private ItemStack pivotItem;
-    private ArrayList<SkysongItemWithAmmount> outputItems;
+    private ArrayList<ResultItem> outputItems;
 
-    public StepData(ArrayList<MarkedItem> markedItems, ItemStack pivotItem, ArrayList<SkysongItemWithAmmount> outputItems) {
+    public StepData(ArrayList<MarkedItem> markedItems, ItemStack pivotItem, ArrayList<ResultItem> outputItems) {
         this.markedItems = markedItems;
         this.pivotItem = pivotItem;
         this.outputItems = outputItems;
@@ -34,11 +34,11 @@ public class StepData {
         this.markedItems = markedItems;
     }
 
-    public ArrayList<SkysongItemWithAmmount> getOutputItems() {
+    public ArrayList<ResultItem> getOutputItems() {
         return outputItems;
     }
 
-    public void setOutputItems(ArrayList<SkysongItemWithAmmount> outputItems) {
+    public void setOutputItems(ArrayList<ResultItem> outputItems) {
         this.outputItems = outputItems;
     }
 

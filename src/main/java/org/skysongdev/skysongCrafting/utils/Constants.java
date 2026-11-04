@@ -1,9 +1,7 @@
 package org.skysongdev.skysongCrafting.utils;
 
-import org.bukkit.NamespacedKey;
 import org.bukkit.event.inventory.InventoryAction;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
-import org.skysongdev.skysongitems.SkysongItems;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -15,15 +13,14 @@ public abstract class Constants {
     public static final String NEXT_CRAFT = "NEXT_CRAFT";
     public static final String PREV_CRAFT = "PREV_CRAFT";
     public static final String CRAFT = "CRAFT";
-    public static final String CRAFTING_KEY_STRING = SkysongCrafting.Instance().getConfig().getString("crafting_key", "material_id");
+    /** The SkysongItems string tag that holds an item's ingredient id, lowercase. */
+    public static final String CRAFTING_KEY_STRING = SkysongCrafting.Instance().getConfig().getString("crafting_key", "material_id").toLowerCase(java.util.Locale.ROOT);
 
     public static final Path RESOURCES_PATH = Path.of(getPlugin(SkysongCrafting.class).getDataFolder().getPath());
-    public static final Path ITEMS_PATH = RESOURCES_PATH.resolve("items");
     public static final Path OUTPUT_PATH = RESOURCES_PATH.resolve("output");
     public static final Path TAGS_PATH = RESOURCES_PATH.resolve("tags");
     public static final Path RECIPES_PATH = RESOURCES_PATH.resolve("recipes");
     public static final Path WORKSTATIONS_PATH = RESOURCES_PATH.resolve("workstations.yml");
-    public static final NamespacedKey CRAFTING_KEY = new NamespacedKey(getPlugin(SkysongItems.class), CRAFTING_KEY_STRING);
 
     public static final String PLUGIN_TAG = "<dark_gray>[<gold>SkysongCrafting<dark_gray>] <reset>";
 
@@ -52,10 +49,5 @@ public abstract class Constants {
         File yaml = directory.resolve(baseName + ".yaml").toFile();
         if (yaml.isFile()) return yaml;
         return null;
-    }
-
-    /** Finds a SkysongItem file in the items folder by name (without extension). */
-    public static File resolveItemFile(String itemId) {
-        return resolveYamlFile(ITEMS_PATH, itemId);
     }
 }

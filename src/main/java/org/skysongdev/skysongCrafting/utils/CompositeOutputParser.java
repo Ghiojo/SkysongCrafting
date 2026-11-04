@@ -2,7 +2,7 @@ package org.skysongdev.skysongCrafting.utils;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.TemplateItem;
 import org.skysongdev.skysongCrafting.data.output.CompositeOutput;
 import org.skysongdev.skysongCrafting.data.output.steps.*;
 
@@ -28,13 +28,13 @@ public final class CompositeOutputParser {
     }
 
     public static CompositeOutput parse(File file, YamlConfiguration yaml,
-                                        ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings) {
+                                        ArrayList<TemplateItem> outputItems, ArrayList<String> outputStrings) {
         return parse(file, yaml, outputItems, outputStrings, message -> SkysongCrafting.Instance().getLogger().warning(message));
     }
 
     /** Same as {@link #parse(File, YamlConfiguration, ArrayList, ArrayList)} with an explicit warning sink (used by tests). */
     public static CompositeOutput parse(File file, YamlConfiguration yaml,
-                                        ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings,
+                                        ArrayList<TemplateItem> outputItems, ArrayList<String> outputStrings,
                                         Consumer<String> warnings) {
         List<Map<?, ?>> rawSteps = yaml.getMapList("steps");
         if (rawSteps.isEmpty()) {

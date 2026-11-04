@@ -3,7 +3,6 @@ package org.skysongdev.skysongCrafting.data.recipe;
 import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
-import org.skysongdev.skysongstats.Utils.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +14,7 @@ public class ShapedRecipeInstance extends RecipeInstance {
     /** One rule per grid slot, parallel to {@link #materialConsumption}; defaults to consume-one. */
     protected List<ConsumptionRule> slotRules = new ArrayList<>();
 
-    public ShapedRecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, ArrayList<String> materialConsumption, Map<Utils.Skills, Integer> skillRequirements) {
+    public ShapedRecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, ArrayList<String> materialConsumption, List<SkillRequirement> skillRequirements) {
         super(output, displayItem, recipeName, craftingTableType, craftingSound, skillRequirements);
         this.materialConsumption = materialConsumption;
     }

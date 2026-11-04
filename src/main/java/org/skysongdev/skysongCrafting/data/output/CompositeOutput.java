@@ -1,7 +1,8 @@
 package org.skysongdev.skysongCrafting.data.output;
 
 import org.skysongdev.skysongCrafting.data.MarkedItem;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.ResultItem;
+import org.skysongdev.skysongCrafting.data.item.TemplateItem;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.data.output.steps.OutputStep;
 
@@ -15,7 +16,7 @@ import java.util.List;
 public class CompositeOutput extends OutputInstance{
     private final List<OutputStep> steps;
 
-    public CompositeOutput(ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings, List<OutputStep> steps) {
+    public CompositeOutput(ArrayList<TemplateItem> outputItems, ArrayList<String> outputStrings, List<OutputStep> steps) {
         super(outputItems, outputStrings, OutputType.COMPOSITE);
         this.steps = steps;
     }
@@ -25,7 +26,7 @@ public class CompositeOutput extends OutputInstance{
     }
 
     @Override
-    public ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<MarkedItem> markedItems) throws OutputException {
+    public ArrayList<ResultItem> getOutput(ArrayList<MarkedItem> markedItems) throws OutputException {
         StepData data = new StepData(markedItems, null, new ArrayList<>());
         for (int i = 0; i < steps.size(); i++) {
             OutputStep step = steps.get(i);

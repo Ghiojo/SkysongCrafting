@@ -1,17 +1,17 @@
 package org.skysongdev.skysongCrafting.data.output.utils;
 
 import org.bukkit.Color;
-import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
-import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
-import org.skysongdev.skysongitems.utils.Constants;
-import org.skysongdev.skysongitems.utils.Utils;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import org.skysongdev.skysongitems.api.ItemTags;
+import org.skysongdev.skysongitems.api.TagType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -68,14 +68,19 @@ public final class PlaceholderParser {
             case "tag": {
                 if (dataParts.length < 2) throw new OutputException("placeholder '" + value + "' needs a tag id (tag:TAG_ID)");
                 String tagId = dataParts[1].trim();
-                if (!Utils.isATag(tagId)) throw new OutputException("'" + tagId + "' is not a tag registered in SkysongItems");
-                NamespacedKey key = Utils.getTag(tagId);
-                PersistentDataType<?, ?> type = Constants.tagList.get(key);
-                if (!meta.getPersistentDataContainer().has(key, type)) {
+                ItemTags tags = SkysongApis.items().tags();
+                Optional<TagType> type = tags.type(tagId);
+                if (type.isEmpty()) throw new OutputException("'" + tagId + "' is not a tag registered in SkysongItems");
+                Optional<?> tagValue = switch (type.get()) {
+                    case INT -> tags.getInt(item, tagId).stream().boxed().findFirst();
+                    case FLOAT -> tags.getFloat(item, tagId);
+                    case BOOL -> tags.getBool(item, tagId);
+                    case STRING -> tags.getString(item, tagId);
+                };
+                if (tagValue.isEmpty()) {
                     throw new OutputException("item referenced by '" + reference + "' has no '" + tagId + "' tag");
                 }
-                Object tagValue = meta.getPersistentDataContainer().get(key, type);
-                return String.valueOf(tagValue);
+                return String.valueOf(tagValue.get());
             }
             case "cmd": {
                 if (dataParts.length < 2) throw new OutputException("placeholder '" + value + "' needs a custom model data kind (cmd:float:I, cmd:color:I, ...)");

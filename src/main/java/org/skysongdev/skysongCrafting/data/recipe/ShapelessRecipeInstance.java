@@ -3,21 +3,19 @@ package org.skysongdev.skysongCrafting.data.recipe;
 import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
 import org.skysongdev.skysongCrafting.data.MaterialCount;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
-import org.skysongdev.skysongstats.Utils.Utils;
 
 import java.util.*;
 
-import static org.skysongdev.skysongCrafting.utils.Constants.CRAFTING_KEY;
 
 public class ShapelessRecipeInstance extends RecipeInstance{
     protected ArrayList<MaterialCount> materialConsumption;
     /** Consumption rule per crafting id (lower-case); ids not present consume one. */
     protected Map<String, ConsumptionRule> rulesById = new HashMap<>();
 
-    public ShapelessRecipeInstance(ArrayList<MaterialCount> materialConsumption, OutputInstance output, Material displayItemMaterial, String recipeName, String craftingTableType, String craftingSound, Map<Utils.Skills, Integer> skillRequirements) {
+    public ShapelessRecipeInstance(ArrayList<MaterialCount> materialConsumption, OutputInstance output, Material displayItemMaterial, String recipeName, String craftingTableType, String craftingSound, List<SkillRequirement> skillRequirements) {
         super(output, displayItemMaterial, recipeName, craftingTableType, craftingSound, skillRequirements);
         this.materialConsumption = new ArrayList<>(materialConsumption);
         this.materialConsumption.sort(Comparator.comparing(MaterialCount::getId, String.CASE_INSENSITIVE_ORDER));
@@ -38,7 +36,7 @@ public class ShapelessRecipeInstance extends RecipeInstance{
 
             ConsumptionRule rule = ConsumptionRule.CONSUME_ONE;
             if (!rulesById.isEmpty() && item.getItemMeta() != null) {
-                String id = item.getItemMeta().getPersistentDataContainer().get(CRAFTING_KEY, PersistentDataType.STRING);
+                String id = SkysongApis.craftingId(item);
                 if (id != null) rule = rulesById.getOrDefault(id.toLowerCase(Locale.ROOT), ConsumptionRule.CONSUME_ONE);
             }
             consumeSlot(inventory, slotIndex, rule);

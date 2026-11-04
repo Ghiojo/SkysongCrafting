@@ -4,12 +4,9 @@ import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.data.output.utils.PlaceholderParser;
-import org.skysongdev.skysongCrafting.utils.Constants;
-import org.skysongdev.skysongitems.SkysongItems;
-import org.skysongdev.skysongitems.utils.SkysongItem;
-import org.skysongdev.skysongitems.utils.Utils;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
 
-import java.io.File;
+import java.util.Optional;
 
 /**
  * Sets the pivot item.
@@ -19,8 +16,8 @@ import java.io.File;
  *     fetch_id: "0"           # marked index
  *
  *   - type: fetch
- *     fetch_type: generated   # start from a fresh SkysongItem
- *     fetch_id: pavise_shield # item file name in the items folder (without extension)
+ *     fetch_type: generated   # start from a fresh SkysongItems saved item
+ *     fetch_id: pavise_shield # the saved item's id, as /si loaditem takes it (e.g. shields/pavise_shield)
  * </pre>
  */
 public class FetchStep extends OutputStep {
@@ -43,13 +40,11 @@ public class FetchStep extends OutputStep {
     public StepData execute(StepData stepData) throws OutputException {
         switch (fetchType) {
             case GENERATED: {
-                File itemFile = Constants.resolveItemFile(fetchId);
-                if (itemFile == null) {
-                    throw new OutputException("no item file named '" + fetchId + "' in the items folder");
+                Optional<ItemStack> generated = SkysongApis.items().templates().create(fetchId);
+                if (generated.isEmpty()) {
+                    throw new OutputException("SkysongItems has no saved item named '" + fetchId + "'");
                 }
-                SkysongItem item = Utils.LoadSkysongItem(itemFile);
-                ItemStack generated = SkysongItems.getPlugin().getUtils().GenerateSkysongItem(item);
-                stepData.setPivotItem(generated);
+                stepData.setPivotItem(generated.get());
                 return stepData;
             }
             case MARKED: {

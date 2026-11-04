@@ -14,18 +14,20 @@ import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
-import org.skysongdev.skysongstats.SkysongStats;
-import org.skysongdev.skysongstats.Utils.Utils.Skills;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import org.skysongdev.skysongitems.api.ItemCharges;
+import org.skysongdev.skysongstats.api.CharacterId;
+import org.skysongdev.skysongstats.api.SkysongStatsApi;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 public abstract class RecipeInstance {
     protected OutputInstance results;
     protected ItemStack displayItem;
-    protected Map<Skills, Integer> skillRequirements;
+    protected List<SkillRequirement> skillRequirements;
     protected String craftingTableType;
     protected String craftingSound;
     protected List<RecipeCondition> conditions = new ArrayList<>();
@@ -34,7 +36,7 @@ public abstract class RecipeInstance {
         return craftingSound;
     }
 
-    public RecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements) {
+    public RecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, List<SkillRequirement> skillRequirements) {
         this.results = output;
         ItemStack buffer = new ItemStack(displayItem);
         ItemMeta metaBuffer = buffer.getItemMeta();
@@ -53,10 +55,6 @@ public abstract class RecipeInstance {
         this.craftingSound = craftingSound.toLowerCase();
     }
 
-    public void addSkillRequirement(Skills skill, int experience) {
-        skillRequirements.put(skill, experience);
-    }
-
     public ItemStack getDisplayItem() {
         return displayItem;
     }
@@ -69,16 +67,29 @@ public abstract class RecipeInstance {
         return results;
     }
 
+    /**
+     * Checks every skill requirement against the character the player is playing now,
+     * comparing skill levels (not raw XP). Empty when the recipe has no requirements.
+     */
+    public List<SkillRequirement.Check> checkSkills(Player player){
+        List<SkillRequirement.Check> checks = new ArrayList<>();
+        if(skillRequirements.isEmpty()) return checks;
+        SkysongStatsApi stats = SkysongApis.stats();
+        Optional<CharacterId> character = stats.profiles().active(player.getUniqueId());
+        for(SkillRequirement requirement : skillRequirements){
+            checks.add(requirement.check(stats.skills(), character));
+        }
+        return checks;
+    }
+
     public boolean doesPlayerHaveSkillToCraft(Player player){
-        for(Skills skill : skillRequirements.keySet()){
-            int playerLevel = SkysongStats.getPlugin().getUtils().getSkillManager().findActiveSkills(player.getUniqueId().toString()).getSkill(skill);
-            if(playerLevel < skillRequirements.get(skill)){
-                return false;
-            }
+        for(SkillRequirement.Check check : checkSkills(player)){
+            if(!check.met()) return false;
         }
         return true;
     }
-    public Map<Skills, Integer> getSkillRequirements() {
+
+    public List<SkillRequirement> getSkillRequirements() {
         return skillRequirements;
     }
 
@@ -129,9 +140,9 @@ public abstract class RecipeInstance {
             case KEEP:
                 return;
             case CHARGES: {
-                ItemMeta meta = item.getItemMeta();
-                PersistentDataContainer pdc = meta == null ? null : meta.getPersistentDataContainer();
-                if (pdc == null || !pdc.has(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER)) {
+                ItemCharges charges = SkysongApis.items().charges();
+                OptionalInt current = charges.get(item);
+                if (current.isEmpty()) {
                     // The recipe asked for charges on an item that has none: consume it like a normal ingredient
                     // rather than silently keeping it (keeping would make the ingredient free).
                     SkysongCrafting.Instance().getLogger().warning("Recipe wanted to take " + rule.getCharges()
@@ -139,11 +150,17 @@ public abstract class RecipeInstance {
                     consumeSlot(inventory, slot, ConsumptionRule.CONSUME_ONE);
                     return;
                 }
-                int charges = pdc.get(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER);
-                pdc.set(org.skysongdev.skysongitems.utils.Constants.chargesKey, PersistentDataType.INTEGER, Math.max(0, charges - rule.getCharges()));
-                item.setItemMeta(meta);
-                ItemStack updated = org.skysongdev.skysongitems.utils.Utils.updateItemLore(item);
-                inventory.setItem(slot, updated != null ? updated : item);
+                // Takes the charges like /si charges add with a negative amount: never below 0,
+                // and the item's lore is redrawn by SkysongItems.
+                try {
+                    charges.add(item, -rule.getCharges());
+                } catch (IllegalArgumentException e) {
+                    SkysongCrafting.Instance().getLogger().warning("SkysongItems refused to take " + rule.getCharges()
+                            + " charge(s) from " + item.getType() + " (" + e.getMessage() + "); consuming one instead.");
+                    consumeSlot(inventory, slot, ConsumptionRule.CONSUME_ONE);
+                    return;
+                }
+                inventory.setItem(slot, item);
                 return;
             }
             case CONSUME:

@@ -19,16 +19,25 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
+    // The SkysongItems and SkysongStats APIs are published from their git repositories by JitPack.
+    maven {
+        name = "jitpack"
+        url = "https://jitpack.io"
+    }
 }
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
-    implementation files("libs/SkysongSpecialItems-1.8.0.jar")
-    implementation files("libs/SkysongStats-1.2.jar")
+    // Only the public APIs: both plugins are installed on the server (plugin.yml depend).
+    // SkysongItems has no release tag yet, so its API is pinned to the commit that added detached edits.
+    compileOnly "com.github.Ghiojo.Skysong-Special-Items:api:4e1188f"
+    compileOnly "com.github.Ghiojo.SkysongStats:api:1.0.0"
 
     // Unit tests cover the pure parts (template parsing, recipe-key helpers).
     // paper-api is needed at test time for YamlConfiguration; no server is started.
     testImplementation "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
+    testImplementation "com.github.Ghiojo.Skysong-Special-Items:api:4e1188f"
+    testImplementation "com.github.Ghiojo.SkysongStats:api:1.0.0"
     testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }

@@ -24,6 +24,14 @@ public class Utils {
     //Tag Map
     public static Map<String, ArrayList<String>> tagMap;
 
+    // SkysongItems string tags SkysongCrafting registers: crafting_key and every random_id output's tag.
+    private static final Set<String> requiredStringTags = new LinkedHashSet<>();
+
+    /** The SkysongItems string tags SkysongCrafting needs, lowercase. Filled while recipes load. */
+    public Set<String> getRequiredStringTags() {
+        return requiredStringTags;
+    }
+
     public Map<ArrayList<String>, ArrayList<RecipeInstance>> getShapedRecipeMap() {
         return shapedRecipeMap;
     }

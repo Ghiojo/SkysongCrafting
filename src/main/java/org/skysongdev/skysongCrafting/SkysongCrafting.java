@@ -7,6 +7,7 @@ import org.skysongdev.skysongCrafting.commands.SkysongCraftingCommand;
 import org.skysongdev.skysongCrafting.data.database.Database;
 import org.skysongdev.skysongCrafting.listeners.GUIListener;
 import org.skysongdev.skysongCrafting.listeners.RandomIdListener;
+import org.skysongdev.skysongCrafting.listeners.SkysongItemsRegistrationListener;
 import org.skysongdev.skysongCrafting.listeners.WorkstationListener;
 import org.skysongdev.skysongCrafting.utils.Constants;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
@@ -100,6 +101,9 @@ public final class SkysongCrafting extends JavaPlugin {
     public void initializeRecipes(){
         Utils.Instance().getShapedRecipeMap().clear();
         Utils.Instance().getShapelessRecipeMap().clear();
+        // The tags SkysongCrafting registers with SkysongItems; random_id outputs add theirs while loading.
+        Utils.Instance().getRequiredStringTags().clear();
+        Utils.Instance().getRequiredStringTags().add(Constants.CRAFTING_KEY_STRING);
         for(File file : RECIPES_PATH.resolve("shaped").toFile().listFiles()){
             loadRecipeFileSafely(file);
         }
@@ -127,6 +131,7 @@ public final class SkysongCrafting extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GUIListener(), this);
         getServer().getPluginManager().registerEvents(new RandomIdListener(), this);
         getServer().getPluginManager().registerEvents(new WorkstationListener(), this);
+        getServer().getPluginManager().registerEvents(new SkysongItemsRegistrationListener(), this);
     }
 
     public void initializeDefaultResources() {
@@ -136,8 +141,8 @@ public final class SkysongCrafting extends JavaPlugin {
             return;
         }
 
+        // Items are no longer kept here: outputs use SkysongItems' saved items (/si saveitem).
         String[] prefixes = new String[] {
-                "items/",
                 "output/",
                 "tags/",
                 "recipes/",

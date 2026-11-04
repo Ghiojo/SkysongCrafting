@@ -6,11 +6,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.skysongdev.skysongCrafting.GUI.WorkbenchGUIType;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MaterialCount;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.TemplateItem;
 import org.skysongdev.skysongCrafting.data.output.*;
 import org.skysongdev.skysongCrafting.data.recipe.*;
 import org.skysongdev.skysongCrafting.data.workstations.Workstation;
-import org.skysongdev.skysongitems.utils.Utils;
+import org.skysongdev.skysongstats.api.Skills;
 
 import java.io.File;
 import java.util.*;
@@ -21,36 +21,32 @@ import static org.skysongdev.skysongCrafting.utils.Constants.*;
 import static org.skysongdev.skysongCrafting.utils.Utils.Instance;
 
 public class YamlParsingUtils {
+    private static final Pattern AMOUNT_SUFFIX = Pattern.compile("([\\*])([0-9]+)");
 
     public static OutputInstance parseOutputInstance(File file, OutputType type){
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         ArrayList<String> outputItems = new ArrayList<>(yaml.getStringList("output_items"));
         ArrayList<String> outputStrings = new ArrayList<>(yaml.getStringList("output_strings"));
 
-        ArrayList<SkysongItemWithAmmount> itemStacks = new ArrayList<>();
-        for(String itemID : outputItems){
-            if(itemID == null || itemID.isEmpty()) continue;
-            Pattern pattern = Pattern.compile("([\\*])([0-9]+)");
-            Matcher matcher = pattern.matcher(itemID);
-
+        // output_items are SkysongItems saved items (the ids /si loaditem takes), optionally with *N.
+        Set<String> savedItems = SkysongApis.items().templates().ids();
+        ArrayList<TemplateItem> itemStacks = new ArrayList<>();
+        for(String entry : outputItems){
+            if(entry == null || entry.isEmpty()) continue;
+            String itemID = entry;
+            int number = 1;
+            Matcher matcher = AMOUNT_SUFFIX.matcher(itemID);
             if(matcher.find()){
-                int number = Integer.parseInt(matcher.group(2));
+                number = Integer.parseInt(matcher.group(2));
                 itemID = itemID.replace(matcher.group(0), "");
-                File itemFile = resolveItemFile(itemID);
-                if(itemFile == null){
-                    SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
-                    continue;
-                }
-                itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), number));
-            } else {
-                File itemFile = resolveItemFile(itemID);
-                if(itemFile == null){
-                    SkysongCrafting.Instance().getLogger().warning("Item with ID " + itemID + " does not exist! (File: " + file.getName() + ")");
-                    continue;
-                }
-                itemStacks.add(new SkysongItemWithAmmount(Utils.LoadSkysongItem(itemFile), 1));
             }
-
+            itemID = itemID.trim();
+            if(!savedItems.contains(itemID)){
+                SkysongCrafting.Instance().getLogger().warning("Output " + file.getName() + ": SkysongItems has no saved item named '" + itemID
+                        + "' (save it with /si saveitem). Item skipped.");
+                continue;
+            }
+            itemStacks.add(new TemplateItem(itemID, number));
         }
 
         switch (type){
@@ -64,8 +60,14 @@ public class YamlParsingUtils {
                 return new RandomOutput(itemStacks, outputStrings, chances, lowerBoundOfRolls, upperBoundOfRolls);
             }
             case RANDOM_ID -> {
-                String idTypeString = yaml.getString("id_to_randomize", "NONE").toUpperCase();
-                return new RandomIdOutput(itemStacks, outputStrings, idTypeString);
+                // A SkysongItems string tag that SkysongCrafting registers itself (see SkysongItemsRegistrationListener).
+                String idTag = yaml.getString("id_to_randomize", "").trim().toLowerCase(Locale.ROOT);
+                if(idTag.isEmpty()){
+                    SkysongCrafting.Instance().getLogger().warning("Output " + file.getName() + " has no 'id_to_randomize' tag. Output not loaded.");
+                    return null;
+                }
+                Instance().getRequiredStringTags().add(idTag);
+                return new RandomIdOutput(itemStacks, outputStrings, idTag);
             }
             case COMPOSITE -> {
                 return CompositeOutputParser.parse(file, yaml, itemStacks, outputStrings);
@@ -96,7 +98,8 @@ public class YamlParsingUtils {
         String recipeType = yaml.getString("recipe_type", "NONE").toUpperCase();
         Material icon = Material.valueOf(yaml.getString("icon", "RED_WOOL"));
         String sound = yaml.getString("sound", "ENTITY_VILLAGER_WORK_TOOLSMITH");
-        Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements = readSkillRequirements(file, yaml);
+        List<SkillRequirement> skillRequirements = readSkillRequirements(file, yaml);
+        if(skillRequirements == null) return; // invalid skill or level; already warned
 
         OutputInstance output = loadOutput(file, yaml);
         if(output == null) return; // already warned
@@ -125,17 +128,22 @@ public class YamlParsingUtils {
         }
     }
 
-    private static Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> readSkillRequirements(File file, YamlConfiguration yaml){
-        Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements = new HashMap<>();
-        for(String skill : yaml.getStringList("skill_requirements")){
+    /**
+     * Reads {@code skill_requirements} through the SkysongStats API. A skill must be a skills.yml id or
+     * alias, nothing else. Any invalid entry refuses the whole recipe (returns {@code null}) after a warning,
+     * so a recipe never becomes craftable by everyone because its requirement was dropped.
+     */
+    private static List<SkillRequirement> readSkillRequirements(File file, YamlConfiguration yaml){
+        List<SkillRequirement> skillRequirements = new ArrayList<>();
+        List<String> entries = yaml.getStringList("skill_requirements");
+        if(entries.isEmpty()) return skillRequirements;
+        Skills skills = SkysongApis.stats().skills();
+        for(String entry : entries){
             try{
-                String[] skillParts = skill.split(":");
-                org.skysongdev.skysongstats.Utils.Utils.Skills skillEnum = org.skysongdev.skysongstats.Utils.Utils.Skills.valueOf(skillParts[0].toUpperCase());
-                int level = Integer.parseInt(skillParts[1]);
-                skillRequirements.put(skillEnum, level);
-            } catch (Exception e){
-                SkysongCrafting.Instance().getLogger().warning("Skill " + skill + " does not exist! (File: " + file.getName() + ")");
-                Bukkit.getLogger().warning(e.getMessage());
+                skillRequirements.add(SkillRequirement.parse(entry, skills));
+            } catch (IllegalArgumentException e){
+                SkysongCrafting.Instance().getLogger().warning("Recipe " + file.getName() + ": " + e.getMessage() + ". Recipe not loaded.");
+                return null;
             }
         }
         return skillRequirements;
@@ -186,7 +194,7 @@ public class YamlParsingUtils {
      * @param markingPattern {@code null} for a plain SHAPED recipe, the marks for SHAPED_MARKING
      */
     private static void registerShaped(File file, YamlConfiguration yaml, OutputInstance output, Material icon, String name,
-                                       String tableType, String sound, Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements,
+                                       String tableType, String sound, List<SkillRequirement> skillRequirements,
                                        List<RecipeCondition> conditions, ArrayList<Boolean> markingPattern){
         ArrayList<String> pattern1D = readPattern(yaml);
         if(pattern1D == null){
@@ -212,7 +220,7 @@ public class YamlParsingUtils {
      * @param markingPattern {@code null} for a plain SHAPELESS recipe, the marks for SHAPELESS_MARKING
      */
     private static void registerShapeless(File file, YamlConfiguration yaml, OutputInstance output, Material icon, String name,
-                                          String tableType, String sound, Map<org.skysongdev.skysongstats.Utils.Utils.Skills, Integer> skillRequirements,
+                                          String tableType, String sound, List<SkillRequirement> skillRequirements,
                                           List<RecipeCondition> conditions, ArrayList<Boolean> markingPattern){
         ArrayList<String> inputs = new ArrayList<>(yaml.getStringList("inputs"));
         List<ConsumptionRule> inputRules = consumptionRules(inputs);

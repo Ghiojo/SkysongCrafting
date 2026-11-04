@@ -1,9 +1,8 @@
 package org.skysongdev.skysongCrafting.data.output;
 
-import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
-import org.skysongdev.skysongitems.utils.SkysongItem;
+import org.skysongdev.skysongCrafting.data.item.ResultItem;
+import org.skysongdev.skysongCrafting.data.item.TemplateItem;
 
 import java.util.ArrayList;
 
@@ -12,7 +11,7 @@ public class RandomOutput extends OutputInstance{
     private int lowerBoundOfRolls;
     private int upperBoundOfRolls;
 
-    public RandomOutput(ArrayList<SkysongItemWithAmmount> outputItems, ArrayList<String> outputStrings, ArrayList<Float> chances, int lowerBoundOfRolls, int upperBoundOfRolls) {
+    public RandomOutput(ArrayList<TemplateItem> outputItems, ArrayList<String> outputStrings, ArrayList<Float> chances, int lowerBoundOfRolls, int upperBoundOfRolls) {
         super(outputItems, outputStrings, OutputType.RANDOM);
         this.chances = chances;
         this.lowerBoundOfRolls = lowerBoundOfRolls;
@@ -20,9 +19,9 @@ public class RandomOutput extends OutputInstance{
     }
 
     @Override
-    public ArrayList<SkysongItemWithAmmount> getOutput(ArrayList<MarkedItem> markedItems) {
+    public ArrayList<ResultItem> getOutput(ArrayList<MarkedItem> markedItems) throws OutputException {
         int rolls = (int) Math.floor(Math.random() * (upperBoundOfRolls - lowerBoundOfRolls + 1) + lowerBoundOfRolls);
-        ArrayList<SkysongItemWithAmmount> finalOutput = new ArrayList<>();
+        ArrayList<ResultItem> finalOutput = new ArrayList<>();
         // Normalize chances so they sum to 1.0
         float total = 0f;
         for (float c : chances) total += c;
@@ -35,7 +34,7 @@ public class RandomOutput extends OutputInstance{
             for (int j = 0; j < chances.size(); j++) {
                 cumulativeChance += chances.get(j) / total; // normalize
                 if (roll <= cumulativeChance) {
-                    finalOutput.add(getOutputItems().get(j));
+                    finalOutput.add(create(getOutputItems().get(j)));
                     break;
                 }
             }
