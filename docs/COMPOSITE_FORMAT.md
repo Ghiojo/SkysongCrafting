@@ -40,15 +40,15 @@ steps:                             # executed in this order
     amount: 1
 ```
 
-`output_items` is still accepted for the icon lore but is optional for composites.
+`output_items` (SkysongItems saved item ids) is still accepted but is optional for composites.
 
 ## Steps
 
 ### `fetch` — choose the pivot
 | Key | Values |
 |---|---|
-| `fetch_type` | `marked` (edit a copy of a marked input) or `generated` (start from a SkysongItem file) |
-| `fetch_id` | marked index (`"0"`) or item file name without extension |
+| `fetch_type` | `marked` (edit a copy of a marked input) or `generated` (start from a fresh SkysongItems saved item) |
+| `fetch_id` | marked index (`"0"`), or the saved item's id as `/si loaditem` takes it (`pavise_shield`, `shields/pavise_shield`) |
 
 ### `tag` — edit a SkysongItems tag on the pivot
 | Key | Values |
@@ -117,7 +117,10 @@ Examples: `marked:1;tag:dye_color`, `pivot;cmd:colors` (the next free colour slo
 
 ## Limits
 
-- The saved item is stored as SkysongItems data and regenerated when placed. Only SkysongItems
-  data survives (name, lore, model, properties, registered tags, custom model data).
+- The saved item is rebuilt by SkysongItems from the data it stores. Only SkysongItems data
+  survives (name, lore, model, properties, registered tags, custom model data).
+- Steps edit the pivot through SkysongItems' detached API: no lore redraw and no change events
+  while the template runs; `property` does not set a printable property's value tags.
 - Player heads and potions cannot be saved by composite outputs yet.
-- Tags used in `tag`/`blend` steps and placeholders must exist in SkysongItems' `config.yml`.
+- Tags used in `tag`/`blend` steps and placeholders must exist in SkysongItems (its `config.yml`,
+  built-in, or registered by a plugin). The `version` tag can't be written.

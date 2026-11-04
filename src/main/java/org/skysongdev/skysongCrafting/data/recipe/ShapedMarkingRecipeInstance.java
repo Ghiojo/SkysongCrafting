@@ -5,15 +5,15 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
-import org.skysongdev.skysongstats.Utils.Utils;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ShapedMarkingRecipeInstance extends ShapedRecipeInstance{
     private ArrayList<Boolean> materialMarks;
 
-    public ShapedMarkingRecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, ArrayList<String> materialConsumption, Map<Utils.Skills, Integer> skillRequirements, ArrayList<Boolean> materialMarks) {
+    public ShapedMarkingRecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, ArrayList<String> materialConsumption, List<SkillRequirement> skillRequirements, ArrayList<Boolean> materialMarks) {
         super(output, displayItem, recipeName, craftingTableType, craftingSound, materialConsumption, skillRequirements);
         this.materialMarks = materialMarks;
     }

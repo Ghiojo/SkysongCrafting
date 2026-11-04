@@ -12,21 +12,20 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.ResultItem;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
+import org.skysongdev.skysongCrafting.data.recipe.SkillRequirement;
 import org.skysongdev.skysongCrafting.events.CraftingEvent;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
-import org.skysongdev.skysongitems.SkysongItems;
-import org.skysongdev.skysongstats.SkysongStats;
-import org.skysongdev.skysongstats.Utils.Utils;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import static org.skysongdev.skysongCrafting.utils.Constants.CRAFTING_KEY;
 import static org.skysongdev.skysongCrafting.utils.Constants.PLUGIN_TAG;
 
 public abstract class AbstractWorkbench implements InventoryHolder {
@@ -78,18 +77,19 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             inventory.setItem(craftingButtonLocation, GUIUtils.Instance().GUI_CRAFT_NONE_BUTTON);
             return;
         }
-        if(!foundRecipes.get(recipeIndex).doesPlayerHaveSkillToCraft(player)){
+        List<SkillRequirement.Check> skillChecks = foundRecipes.get(recipeIndex).checkSkills(player);
+        if(!skillChecks.stream().allMatch(SkillRequirement.Check::met)){
             ItemStack noSkillItem = new ItemStack(GUIUtils.Instance().GUI_CRAFT_NO_SKILL_BUTTON);
-            List<Component> loreList = noSkillItem.getItemMeta().lore();
-            for(Utils.Skills  skill : foundRecipes.get(recipeIndex).getSkillRequirements().keySet()){
-                int requiredLevel = foundRecipes.get(recipeIndex).getSkillRequirements().get(skill);
-                int playerLevel = SkysongStats.getPlugin().getUtils().getSkillManager().findActiveSkills(player.getUniqueId().toString()).getSkill(skill);
-                if(playerLevel < requiredLevel)
-                    loreList.add(SkysongCrafting.GetMM().deserialize("<red>" + Utils.Skills.getSkillName(skill) + " | Your Skill: " + SkysongStats.getPlugin().getUtils().getSkillManager().getSkillLevel(playerLevel) + " -> Required Skill Level: " + SkysongStats.getPlugin().getUtils().getSkillManager().getSkillLevel(requiredLevel)).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
-                else
-                    loreList.add(SkysongCrafting.GetMM().deserialize("<green>" + Utils.Skills.getSkillName(skill) + "  | Your Skill: " + SkysongStats.getPlugin().getUtils().getSkillManager().getSkillLevel(playerLevel) + " -> Required Skill Level: " + SkysongStats.getPlugin().getUtils().getSkillManager().getSkillLevel(requiredLevel)).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
-            }
             ItemMeta meta = noSkillItem.getItemMeta();
+            List<Component> loreList = new ArrayList<>(meta.lore() == null ? List.of() : meta.lore());
+            // Names come from SkysongStats' skills.yml as plain text, so they are escaped, not parsed.
+            MiniMessage mm = SkysongCrafting.GetMM();
+            for(SkillRequirement.Check check : skillChecks){
+                String line = (check.met() ? "<green>" : "<red>") + mm.escapeTags(check.skillName())
+                        + " | Your Skill: " + mm.escapeTags(check.playerLevel())
+                        + " -> Required Skill Level: " + mm.escapeTags(check.requiredLevel());
+                loreList.add(mm.deserialize(line).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE));
+            }
             meta.lore(loreList);
             noSkillItem.setItemMeta(meta);
             inventory.setItem(craftingButtonLocation, noSkillItem);
@@ -119,13 +119,8 @@ public abstract class AbstractWorkbench implements InventoryHolder {
         ArrayList<String> previousInput = new ArrayList<>(inputSlot);
         inputSlot.clear();
         for(int slot : inputSlotReferences){
-            ItemStack item = inventory.getItem(slot);
-            if(item != null
-                    && item.getType() != org.bukkit.Material.AIR
-                    && item.getItemMeta().getPersistentDataContainer().has(CRAFTING_KEY)) {
-                        inputSlot.add(item.getItemMeta().getPersistentDataContainer().get(CRAFTING_KEY, org.bukkit.persistence.PersistentDataType.STRING));
-            } else
-                inputSlot.add("");
+            String craftingId = SkysongApis.craftingId(inventory.getItem(slot));
+            inputSlot.add(craftingId == null ? "" : craftingId);
         }
         return !previousInput.equals(inputSlot);
     }
@@ -157,9 +152,9 @@ public abstract class AbstractWorkbench implements InventoryHolder {
 
         ArrayList<ItemStack> results = new ArrayList<>();
         try {
-            for(SkysongItemWithAmmount skysongItem : recipe.getResults().getOutput(markedItems)){
-                ItemStack stack = SkysongItems.getPlugin().getUtils().GenerateSkysongItem(skysongItem.getItem());
-                stack.setAmount(skysongItem.getAmmount());
+            for(ResultItem result : recipe.getResults().getOutput(markedItems)){
+                ItemStack stack = result.item();
+                stack.setAmount(result.amount());
                 results.add(stack);
             }
         } catch (OutputException e) {

@@ -2,13 +2,11 @@ package org.skysongdev.skysongCrafting.data.output.steps;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
-import org.skysongdev.skysongCrafting.data.item.SkysongItemWithAmmount;
+import org.skysongdev.skysongCrafting.data.item.ResultItem;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
-import org.skysongdev.skysongitems.utils.Constants;
-import org.skysongdev.skysongitems.utils.SkysongItem;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import org.skysongdev.skysongitems.api.ItemTemplates;
 
 import java.util.Set;
 
@@ -18,7 +16,7 @@ import java.util.Set;
  *   - type: save
  *     amount: 1
  * </pre>
- * The item is stored as SkysongItems data and regenerated when placed in the output slots, so
+ * The item is rebuilt by SkysongItems from the data it stores ({@link ItemTemplates#rebuild}), so
  * only SkysongItems data (name, lore, model, properties, registered tags, custom model data) is kept.
  */
 public class SaveStep extends OutputStep {
@@ -43,27 +41,23 @@ public class SaveStep extends OutputStep {
     @Override
     public StepData execute(StepData stepData) throws OutputException {
         ItemStack pivot = requirePivot(stepData);
-        ItemMeta meta = pivot.getItemMeta();
+        ItemTemplates templates = SkysongApis.items().templates();
 
-        // SkysongItem(ItemStack) reads these tags without null checks.
-        if (meta == null
-                || !meta.getPersistentDataContainer().has(Constants.versionKey, PersistentDataType.STRING)
-                || !meta.getPersistentDataContainer().has(Constants.loreKey, PersistentDataType.STRING)) {
+        if (!templates.isSkysongItem(pivot)) {
             throw new OutputException("the item being saved is not a SkysongItem");
         }
-        // SkysongItems regenerates heads and potions through subclasses that SkysongItem(ItemStack) does not produce.
+        // A rebuild keeps only what SkysongItems stores, which loses a head's owner and a potion's effects.
         if (UNSUPPORTED.contains(pivot.getType())) {
             throw new OutputException("saving " + pivot.getType() + " items is not supported by composite outputs yet");
         }
-        // SkysongItem(ItemStack) stores null custom model data when the item has none, and
-        // GenerateSkysongItem then dereferences it. Make sure the component exists.
-        if (!meta.hasCustomModelDataComponent()) {
-            meta.setCustomModelDataComponent(meta.getCustomModelDataComponent());
-            pivot.setItemMeta(meta);
-        }
 
-        SkysongItem skysongItem = new SkysongItem(pivot);
-        stepData.getOutputItems().add(new SkysongItemWithAmmount(skysongItem, amount));
+        ItemStack rebuilt;
+        try {
+            rebuilt = templates.rebuild(pivot);
+        } catch (IllegalArgumentException e) {
+            throw new OutputException("SkysongItems could not rebuild the item: " + e.getMessage());
+        }
+        stepData.getOutputItems().add(new ResultItem(rebuilt, amount));
         return stepData;
     }
 }

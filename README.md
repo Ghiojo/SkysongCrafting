@@ -22,7 +22,8 @@ plugin's data folder on first run.
 ## Requirements
 
 - Paper 1.21.11, Java 21
-- Skysong_Items 1.8.0 (hard dependency) and SkysongStats 1.2 on the server
+- Skysong_Items (API 1.3.0 or newer) and SkysongStats (API 1.0.0 or newer), both hard dependencies
+- Output items are SkysongItems saved items (`/si saveitem`); SkysongCrafting has no `items/` folder
 - MySQL for workstation storage (`config.yml`)
 
 ## Building
@@ -32,8 +33,9 @@ plugin's data folder on first run.
 ./gradlew build -x test
 ```
 
-The two Skysong plugin jars are read from `libs/` (`SkysongSpecialItems-1.8.0.jar`,
-`SkysongStats-1.2.jar`). The output jar is in `build/libs/`.
+SkysongCrafting compiles against the public APIs of SkysongItems and SkysongStats, which JitPack
+publishes from their repositories (`com.github.Ghiojo.Skysong-Special-Items:api`,
+`com.github.Ghiojo.SkysongStats:api:1.0.0`). The output jar is in `build/libs/`.
 
 ## Commands
 

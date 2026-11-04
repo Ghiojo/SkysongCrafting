@@ -114,6 +114,26 @@ minutes; refactors never mixed with behaviour changes.
    intended (players can see what someone else is doing at the bench). Do not change.
 6. Tag-expansion guard (optional).
 
+## Milestone 4 — SkysongItems and SkysongStats APIs (2026-11-04; awaiting owner build and test)
+
+Branch: `claude/project-thread-ihf41s`. SkysongCrafting now uses only the public APIs
+(`SkysongItemsApi`, `SkysongStatsApi`), both in plugin.yml `depend`, built from JitPack.
+
+- Items: no own `items/` folder. `output_items` and `fetch_id` (generated) are SkysongItems saved item
+  ids, checked against `templates().ids()` at load and created with `templates().create(id)` on each craft.
+  `save` uses `templates().rebuild(item)`. Composite steps edit through `detached()` (no events, no lore
+  redraw). Charges (`^N`) go through `charges().add(item, -N)` (lore redrawn, change event fires).
+- Tags: `crafting_key` and every `id_to_randomize` are registered as STRING tags in
+  `SkysongItemsRegisterEvent`; built-in/config tags are left alone. A tag added by `/sc reload` needs a
+  `/si reload` (SkysongItems has no API to start a registration round); `/sc reload` says so.
+- Skills: `skill_requirements` resolve strictly by skills.yml id or alias. An unknown skill or level is
+  logged as invalid and the recipe is not loaded. Requirements compare **levels** (player's level from
+  active-profile XP vs required level), not XP. Level may be a level id/name or an XP amount (its level).
+  Display uses the skill's `short-name` and the level names from skills.yml. No active character = not met.
+- Example recipes migrated to `metalworking:novice`. Server recipe files using 1.2 enum names must be
+  migrated (table in `docs/RECIPE_FORMAT.md`).
+- `SkillRequirementTest` covers parsing and the level comparison against a fake `Skills`.
+
 ## Later / optional
 - Shapeless conditional recipes already covered (conditions work on any recipe type).
 - Composite steps for name/lore editing, if wanted.

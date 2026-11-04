@@ -18,10 +18,14 @@ name: "Smelting Recipe"
 # Filename does not include the .yaml extension.
 output: "basic:basic_output"
 
-# Skill experience required to craft the item, format is "skill:amount"
+# Skill level required to craft the item, format is "skill:level".
+# skill: a skill id or alias from SkysongStats' skills.yml (e.g. metalworking, metal, mistgathering, tande).
+#        Anything else is an invalid skill and the recipe is not loaded.
+# level: a level id or name from skills.yml (e.g. novice), or an amount of XP, which means the level that XP reaches.
+# A player can craft when their skill level is the required level or higher.
 # This can be left empty if no skill is required.
 skill_requirements:
-  - "smithing:16"
+  - "metalworking:novice"
 
 # Ingredients of the recipe as material_id values, in any order. For multiple of the same item, use *(number)
 # at the end (e.g. item1*3 for 3 of item1). Use "#tag_id" to accept any item of a tag (see tags/).

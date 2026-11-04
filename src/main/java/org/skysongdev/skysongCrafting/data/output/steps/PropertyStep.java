@@ -1,17 +1,10 @@
 package org.skysongdev.skysongCrafting.data.output.steps;
 
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
-import org.skysongdev.skysongitems.utils.Constants;
-import org.skysongdev.skysongitems.utils.Utils;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import org.skysongdev.skysongitems.api.ItemProperties;
 
 /**
  * Adds or removes a SkysongItems property on the pivot item.
@@ -21,6 +14,9 @@ import java.util.List;
  *     property_id: painted
  * </pre>
  * Setting a property the item already has, or removing one it lacks, is not an error.
+ * <p>
+ * The pivot is a copy nobody holds yet, so the edit goes through SkysongItems' detached view:
+ * only the properties list changes (no value tags are set, no lore is redrawn, no event fires).
  */
 public class PropertyStep extends OutputStep {
     public enum Operation { SET, REMOVE }
@@ -40,34 +36,23 @@ public class PropertyStep extends OutputStep {
 
     @Override
     public StepData execute(StepData stepData) throws OutputException {
-        if (!Utils.isAProperty(propertyId)) {
+        ItemProperties properties = SkysongApis.items().detached().properties();
+        if (!properties.exists(propertyId)) {
             throw new OutputException("'" + propertyId + "' is not a property registered in SkysongItems");
         }
         ItemStack item = requirePivot(stepData);
-        ItemMeta meta = item.getItemMeta();
-        PersistentDataContainer container = meta.getPersistentDataContainer();
-
-        String stored = container.get(Constants.propertiesKey, PersistentDataType.STRING);
-        List<String> properties = new ArrayList<>();
-        if (stored != null && !stored.isEmpty()) {
-            properties.addAll(Arrays.asList(stored.split(";")));
+        try {
+            switch (operation) {
+                case SET:
+                    properties.add(item, propertyId);
+                    break;
+                case REMOVE:
+                    properties.remove(item, propertyId);
+                    break;
+            }
+        } catch (IllegalArgumentException e) {
+            throw new OutputException("SkysongItems refused to change property '" + propertyId + "': " + e.getMessage());
         }
-
-        switch (operation) {
-            case SET:
-                if (!properties.contains(propertyId)) properties.add(propertyId);
-                break;
-            case REMOVE:
-                properties.remove(propertyId);
-                break;
-        }
-
-        if (properties.isEmpty()) {
-            container.remove(Constants.propertiesKey);
-        } else {
-            container.set(Constants.propertiesKey, PersistentDataType.STRING, String.join(";", properties));
-        }
-        item.setItemMeta(meta);
         stepData.setPivotItem(item);
         return stepData;
     }

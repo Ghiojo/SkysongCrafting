@@ -18,9 +18,13 @@ name: "Shaped Recipe"
 # Filename does not include the .yaml extension.
 output: "basic:basic_output"
 
-# Skill experience required to craft the item, format is "skill:amount"
+# Skill level required to craft the item, format is "skill:level".
+# skill: a skill id or alias from SkysongStats' skills.yml (e.g. metalworking, metal, mistgathering, tande).
+#        Anything else is an invalid skill and the recipe is not loaded.
+# level: a level id or name from skills.yml (e.g. novice), or an amount of XP, which means the level that XP reaches.
+# A player can craft when their skill level is the required level or higher.
 skill_requirements:
-  - "smithing:16"
+  - "metalworking:novice"
 
 # Ingredients of the recipe in a 5x5 grid, use "" for empty slots.
 # The strings in each slot are the SkysongItems material_id of the required item. Use "#tag_id" to accept any item of a tag.
