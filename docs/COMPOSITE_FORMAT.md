@@ -62,8 +62,39 @@ steps:                             # executed in this order
 |---|---|
 | `operation` | `set`, `remove` |
 | `trait_id` | a trait registered in SkysongItems (`/si trait add` lists them) |
+| `duration` | optional: how long the change lasts, as SkysongItems reads times: a number and a unit (`s`, `m`, `h`, `d`, `w`, `mo`, `y`, or a unit another plugin registered), combinable, such as `30m`, `24h`, `1d12h` |
 
 Setting a trait the item already has, or removing one it lacks, does nothing.
+
+Without `duration` the change is for good. With it, the crafted item carries a SkysongItems
+timer, the same one `/si trait add <trait> <time>` makes:
+
+- `set` for a while: the trait is removed once the time has passed. If the item already has the
+  trait **for good**, it keeps it for good (the craft never shortens a trait the item owns); if
+  it has it **for a while**, its time starts again from the craft.
+- `remove` for a while: the trait comes back once the time has passed. If the item didn't have
+  it, nothing happens and nothing comes back later.
+
+The time counts from the craft. Like every SkysongItems timer it runs lazily: the trait goes
+away (or comes back) the next time a player deals with the item once the time has passed.
+A `duration` that isn't a time is refused when the file loads; a unit SkysongItems doesn't know
+refuses the craft (nothing is consumed).
+
+```yaml
+# Honing a blade: the marked sword gets the "honed" trait for one day.
+steps:
+  - type: fetch
+    fetch_type: marked
+    fetch_id: "0"
+  - type: trait
+    operation: set
+    trait_id: honed
+    duration: 24h
+  - type: save
+```
+
+The same works on a fresh item (`fetch_type: generated`), so a plain "make an item" recipe can
+hand out an item with a temporary trait by using a composite output instead of a basic one.
 
 SkysongItems used to call traits "properties". The old spelling, `type: property` with
 `property_id`, still loads as a `trait` step so existing files keep working, but it is legacy:
@@ -125,6 +156,10 @@ Examples: `marked:1;tag:dye_color`, `pivot;cmd:colors` (the next free colour slo
   survives (name, lore, model, traits, registered tags, custom model data).
 - Steps edit the pivot through SkysongItems' detached API: no lore redraw and no change events
   while the template runs; `trait` does not set a printable trait's value tags.
+- `save` rebuilds the item from its SkysongItems template, which keeps each timer's **full**
+  time rather than the time it had left. So crafting on an item that already carries a timer
+  (for example a trait it got for 24h, 20h ago) starts that timer again from the craft. This is
+  how SkysongItems' rebuild works; changing it would need a SkysongItems change.
 - Player heads and potions cannot be saved by composite outputs yet.
 - Tags used in `tag`/`blend` steps and placeholders must exist in SkysongItems (its `config.yml`,
   built-in, or registered by a plugin). The `version` tag can't be written.

@@ -88,6 +88,43 @@ class CompositeOutputParserTest {
     }
 
     @Test
+    void traitStepReadsAnOptionalDuration() {
+        CompositeOutput output = parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                    trait_id: honed
+                    duration: 1d12h
+                  - type: trait
+                    operation: remove
+                    trait_id: rusted
+                  - type: save
+                """);
+        assertNotNull(output, warnings.toString());
+        assertEquals("1d12h", ((TraitStep) output.getSteps().get(1)).getDuration());
+        assertNull(((TraitStep) output.getSteps().get(2)).getDuration(), "no duration means for good");
+    }
+
+    @Test
+    void traitStepWithMalformedDurationIsRefused() {
+        assertNull(parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                    trait_id: honed
+                    duration: 24
+                  - type: save
+                """));
+        assertTrue(onlyWarning().contains("step 2") && onlyWarning().contains("duration"), warnings.toString());
+    }
+
+    @Test
     void traitStepWithoutTraitIdIsRefused() {
         assertNull(parse("""
                 steps:

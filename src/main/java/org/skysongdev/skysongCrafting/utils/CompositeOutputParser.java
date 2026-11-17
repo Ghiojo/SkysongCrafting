@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 /**
  * Reads the {@code steps} list of a composite output file into {@link OutputStep}s.
@@ -21,6 +22,13 @@ import java.util.function.Consumer;
  */
 public final class CompositeOutputParser {
     private CompositeOutputParser() {}
+
+    /**
+     * The shape of a time SkysongItems reads: numbers each followed by a unit, such as {@code 24h}
+     * or {@code 1d12h}. Units are letters, since plugins may register their own; SkysongItems
+     * checks the unit itself when the step runs.
+     */
+    private static final Pattern DURATION = Pattern.compile("(\\d+[a-zA-Z]+)+");
 
     /** Thrown internally for a malformed step; the message is logged with the step number. */
     private static class ParseException extends Exception {
@@ -92,7 +100,11 @@ public final class CompositeOutputParser {
                 String traitId = optionalString(raw, "trait_id");
                 if (traitId == null) traitId = optionalString(raw, "property_id");
                 if (traitId == null) throw new ParseException("missing 'trait_id'");
-                return new TraitStep(op, traitId);
+                String duration = optionalString(raw, "duration");
+                if (duration != null && !DURATION.matcher(duration).matches()) {
+                    throw new ParseException("'duration' must be a time such as 30m, 24h, 7d or 1d12h, got '" + duration + "'");
+                }
+                return new TraitStep(op, traitId, duration);
             }
             case "cmd": {
                 CMDStep.CmdType cmdType = requireEnum(raw, "cmd_type", CMDStep.CmdType.class);

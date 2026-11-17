@@ -134,6 +134,21 @@ Branch: `claude/project-thread-ihf41s`. SkysongCrafting now uses only the public
   migrated (table in `docs/RECIPE_FORMAT.md`).
 - `SkillRequirementTest` covers parsing and the level comparison against a fake `Skills`.
 
+## Milestone 5 — SkysongItems 1.2.0: traits and timed traits (2026-11-17; awaiting owner build and test)
+
+Branch: `claude/project-thread-ke9f9b`, two commits (refactor, then feature).
+
+- Built against SkysongItems 1.2.0 (API 1.15.0). "Properties" are "traits" in SkysongItems now; the
+  old names are deprecated for removal. The composite `property` step is the `trait` step
+  (`trait_id`) on `ItemTraits`; `type: property` / `property_id` still load as a `trait` step.
+- `trait` takes an optional `duration` (`24h`, `1d12h`): `set` uses `traits().addFor` (removed after
+  the time), `remove` uses `traits().removeFor` (added back after). A trait the item already has for
+  good is never made temporary by a craft. Malformed durations are refused at load; unknown units
+  refuse the craft.
+- Known SkysongItems behaviour: `save` (rebuild) restarts every timer on the item at its full span.
+- Checks: composite engine + parser compiled against the SkysongItems 1.2.0 api sources with Bukkit
+  stubs (no deprecation warnings from SkysongCrafting code); `CompositeOutputParserTest` 19/19.
+
 ## Later / optional
 - Shapeless conditional recipes already covered (conditions work on any recipe type).
 - Composite steps for name/lore editing, if wanted.
