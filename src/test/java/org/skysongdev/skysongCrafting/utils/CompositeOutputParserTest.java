@@ -48,9 +48,9 @@ class CompositeOutputParserTest {
                     operation: add
                     tag_id: layer_count
                     values: ["1"]
-                  - type: property
+                  - type: trait
                     operation: set
-                    property_id: painted
+                    trait_id: painted
                   - type: blend
                     tag_id: dye_color
                     sources: ["marked:1", "marked:2"]
@@ -65,10 +65,191 @@ class CompositeOutputParserTest {
         assertInstanceOf(FetchStep.class, steps.get(0));
         assertInstanceOf(CMDStep.class, steps.get(1));
         assertInstanceOf(TagStep.class, steps.get(2));
-        assertInstanceOf(PropertyStep.class, steps.get(3));
+        assertInstanceOf(TraitStep.class, steps.get(3));
         assertInstanceOf(BlendStep.class, steps.get(4));
         assertInstanceOf(SaveStep.class, steps.get(5));
         assertEquals(2, ((SaveStep) steps.get(5)).getAmount());
+    }
+
+    @Test
+    void legacyPropertyStepStillLoadsAsTraitStep() {
+        CompositeOutput output = parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: property
+                    operation: remove
+                    property_id: painted
+                  - type: save
+                """);
+        assertNotNull(output, warnings.toString());
+        assertInstanceOf(TraitStep.class, output.getSteps().get(1));
+    }
+
+    @Test
+    void traitStepReadsAnOptionalDuration() {
+        CompositeOutput output = parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                    trait_id: honed
+                    duration: 1d12h
+                  - type: trait
+                    operation: remove
+                    trait_id: rusted
+                  - type: save
+                """);
+        assertNotNull(output, warnings.toString());
+        assertEquals(StepTiming.forTime("1d12h"), ((TraitStep) output.getSteps().get(1)).getTiming());
+        assertEquals(StepTiming.NOW, ((TraitStep) output.getSteps().get(2)).getTiming(), "no time means for good");
+    }
+
+    @Test
+    void traitStepWithMalformedDurationIsRefused() {
+        assertNull(parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                    trait_id: honed
+                    duration: 24
+                  - type: save
+                """));
+        assertTrue(onlyWarning().contains("step 2") && onlyWarning().contains("duration"), warnings.toString());
+    }
+
+    private static final String FETCH = """
+            steps:
+              - type: fetch
+                fetch_type: marked
+                fetch_id: "0"
+            """;
+
+    /** A template of a fetch, the given step (indented as a list entry) and a save. */
+    private CompositeOutput parseStep(String step) {
+        return parse(FETCH + step.indent(2) + "  - type: save\n");
+    }
+
+    @Test
+    void everyTimerStepLoadsWithItsTiming() {
+        CompositeOutput output = parse(FETCH + """
+                  - type: trait
+                    operation: set
+                    trait_id: blessed
+                    after: 1d
+                  - type: tag
+                    operation: set
+                    tag_id: sharpness
+                    values: ["3"]
+                    duration: 12h
+                  - type: tag
+                    operation: add
+                    tag_id: rust
+                    values: ["1"]
+                    every: 1w
+                  - type: tag
+                    operation: remove
+                    tag_id: wet
+                    after: 30m
+                  - type: charges
+                    operation: add
+                    values: ["2"]
+                    duration: 24h
+                  - type: hp
+                    operation: set_max
+                    values: ["20"]
+                    after: 1mo
+                  - type: charges
+                    operation: remove
+                    every: 1d
+                  - type: transform
+                    every: 1mo
+                  - type: timers
+                    operation: clear
+                    action: remove_trait
+                    target: honed
+                  - type: save
+                """);
+        assertNotNull(output, warnings.toString());
+        List<OutputStep> steps = output.getSteps();
+        assertEquals(StepTiming.after("1d"), ((TraitStep) steps.get(1)).getTiming());
+        assertEquals(StepTiming.forTime("12h"), ((TagStep) steps.get(2)).getTiming());
+        assertEquals(StepTiming.every("1w"), ((TagStep) steps.get(3)).getTiming());
+        assertEquals(StepTiming.after("30m"), ((TagStep) steps.get(4)).getTiming());
+        MeterStep charges = (MeterStep) steps.get(5);
+        assertEquals(MeterStep.Meter.CHARGES, charges.getMeter());
+        assertEquals(StepTiming.forTime("24h"), charges.getTiming());
+        MeterStep hp = (MeterStep) steps.get(6);
+        assertEquals(MeterStep.Meter.HP, hp.getMeter());
+        assertEquals(MeterStep.Operation.SET_MAX, hp.getOperation());
+        assertEquals(StepTiming.every("1d"), ((MeterStep) steps.get(7)).getTiming());
+        assertEquals(StepTiming.every("1mo"), ((TransformStep) steps.get(8)).getTiming());
+        assertInstanceOf(TimersStep.class, steps.get(9));
+    }
+
+    @Test
+    void chargesAndHpCanChangeNow() {
+        assertNotNull(parseStep("""
+                - type: hp
+                  operation: add
+                  values: ["-2", "marked:1;tag:bonus"]
+                """), warnings.toString());
+        assertEquals(StepTiming.NOW, ((MeterStep) parseStep("""
+                - type: charges
+                  operation: set
+                  values: ["5"]
+                """).getSteps().get(1)).getTiming());
+    }
+
+    @Test
+    void timingCombinationsSkysongItemsCantDoAreRefused() {
+        String[] refused = {
+                // two timings on one step
+                "- type: trait\n  operation: set\n  trait_id: honed\n  duration: 1d\n  after: 2d\n",
+                // a tag can't be removed for a while
+                "- type: tag\n  operation: remove\n  tag_id: wet\n  duration: 1h\n",
+                // set and set_max on charges/HP only now, after or every
+                "- type: hp\n  operation: set\n  values: [\"5\"]\n  duration: 1h\n",
+                "- type: charges\n  operation: set_max\n  values: [\"5\"]\n  duration: 1h\n",
+                // remove on charges/HP only after or every
+                "- type: charges\n  operation: remove\n",
+                "- type: hp\n  operation: remove\n  duration: 1h\n",
+                // transform only after or every
+                "- type: transform\n",
+                "- type: transform\n  duration: 1d\n",
+                // charges/HP need values except for remove
+                "- type: charges\n  operation: add\n",
+                // malformed times
+                "- type: tag\n  operation: set\n  tag_id: a\n  values: [\"1\"]\n  every: soon\n",
+                "- type: transform\n  after: 7\n",
+                // unknown timers operation
+                "- type: timers\n  operation: list\n",
+        };
+        for (String step : refused) {
+            warnings.clear();
+            assertNull(parseStep(step), "should be refused: " + step);
+            assertTrue(onlyWarning().contains("step 2"), step + " -> " + warnings);
+        }
+    }
+
+    @Test
+    void traitStepWithoutTraitIdIsRefused() {
+        assertNull(parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                  - type: save
+                """));
+        assertTrue(onlyWarning().contains("step 2") && onlyWarning().contains("trait_id"), warnings.toString());
     }
 
     @Test

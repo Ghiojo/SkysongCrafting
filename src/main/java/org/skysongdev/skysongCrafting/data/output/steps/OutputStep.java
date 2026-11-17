@@ -4,6 +4,9 @@ import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
+import org.skysongdev.skysongCrafting.utils.SkysongApis;
+import org.skysongdev.skysongitems.api.ItemTimers;
+import org.skysongdev.skysongitems.api.TimerChange;
 
 /**
  * One instruction of a composite output template.
@@ -27,5 +30,32 @@ public abstract class OutputStep {
             throw new OutputException("no item to work on; add a 'fetch' step before this one");
         }
         return pivot;
+    }
+
+    /**
+     * Stores a SkysongItems timer on the pivot that makes {@code change} after, or every,
+     * {@code timing}'s time. The pivot is a copy nobody holds yet, so it goes through the detached view.
+     *
+     * @throws OutputException when SkysongItems refuses the timer: a time it doesn't read, or a
+     *                         change that can't apply to the item
+     */
+    protected static void schedule(ItemStack item, TimerChange change, StepTiming timing) throws OutputException {
+        ItemTimers timers = SkysongApis.items().detached().timers();
+        try {
+            switch (timing.kind()) {
+                case AFTER -> timers.after(item, change, timing.time());
+                case EVERY -> timers.every(item, change, timing.time());
+                default -> throw new IllegalStateException("not a scheduled timing: " + timing.describe());
+            }
+        } catch (IllegalArgumentException e) {
+            throw new OutputException("SkysongItems refused the timer '" + timing.describe() + "': " + e.getMessage());
+        } catch (AbstractMethodError | NoSuchMethodError e) {
+            throw newerSkysongItemsNeeded();
+        }
+    }
+
+    /** The message for a server whose SkysongItems is older than the API this plugin is built against. */
+    protected static OutputException newerSkysongItemsNeeded() {
+        return new OutputException("item timers need SkysongItems 1.2.0 or newer on the server");
     }
 }
