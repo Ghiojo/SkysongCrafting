@@ -57,13 +57,17 @@ steps:                             # executed in this order
 | `tag_id` | a tag registered in SkysongItems' `config.yml` |
 | `values` | list; number tags **sum** every entry, other tags take the first. Not needed for `remove`. |
 
-### `property` — add or remove a SkysongItems property
+### `trait` — add or remove a SkysongItems trait
 | Key | Values |
 |---|---|
 | `operation` | `set`, `remove` |
-| `property_id` | a property registered in SkysongItems |
+| `trait_id` | a trait registered in SkysongItems (`/si trait add` lists them) |
 
-Setting a property the item already has, or removing one it lacks, does nothing.
+Setting a trait the item already has, or removing one it lacks, does nothing.
+
+SkysongItems used to call traits "properties". The old spelling, `type: property` with
+`property_id`, still loads as a `trait` step so existing files keep working, but it is legacy:
+use `trait` / `trait_id` in new files.
 
 ### `cmd` — edit the pivot's custom model data
 Custom model data holds four lists: floats, strings, booleans (flags) and colors.
@@ -118,9 +122,9 @@ Examples: `marked:1;tag:dye_color`, `pivot;cmd:colors` (the next free colour slo
 ## Limits
 
 - The saved item is rebuilt by SkysongItems from the data it stores. Only SkysongItems data
-  survives (name, lore, model, properties, registered tags, custom model data).
+  survives (name, lore, model, traits, registered tags, custom model data).
 - Steps edit the pivot through SkysongItems' detached API: no lore redraw and no change events
-  while the template runs; `property` does not set a printable property's value tags.
+  while the template runs; `trait` does not set a printable trait's value tags.
 - Player heads and potions cannot be saved by composite outputs yet.
 - Tags used in `tag`/`blend` steps and placeholders must exist in SkysongItems (its `config.yml`,
   built-in, or registered by a plugin). The `version` tag can't be written.

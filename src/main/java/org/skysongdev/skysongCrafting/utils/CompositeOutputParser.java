@@ -86,9 +86,13 @@ public final class CompositeOutputParser {
                 }
                 return new TagStep(op, tagId, values);
             }
-            case "property": {
-                PropertyStep.Operation op = requireEnum(raw, "operation", PropertyStep.Operation.class);
-                return new PropertyStep(op, requireString(raw, "property_id"));
+            case "trait":
+            case "property": { // 'property' / 'property_id': the names from before SkysongItems renamed properties to traits
+                TraitStep.Operation op = requireEnum(raw, "operation", TraitStep.Operation.class);
+                String traitId = optionalString(raw, "trait_id");
+                if (traitId == null) traitId = optionalString(raw, "property_id");
+                if (traitId == null) throw new ParseException("missing 'trait_id'");
+                return new TraitStep(op, traitId);
             }
             case "cmd": {
                 CMDStep.CmdType cmdType = requireEnum(raw, "cmd_type", CMDStep.CmdType.class);
@@ -125,7 +129,7 @@ public final class CompositeOutputParser {
                 return new SaveStep(amount);
             }
             default:
-                throw new ParseException("unknown step type '" + type + "' (expected fetch, tag, property, cmd, blend or save)");
+                throw new ParseException("unknown step type '" + type + "' (expected fetch, tag, trait, cmd, blend or save)");
         }
     }
 

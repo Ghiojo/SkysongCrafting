@@ -4,54 +4,55 @@ import org.bukkit.inventory.ItemStack;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.data.StepData;
 import org.skysongdev.skysongCrafting.utils.SkysongApis;
-import org.skysongdev.skysongitems.api.ItemProperties;
+import org.skysongdev.skysongitems.api.ItemTraits;
 
 /**
- * Adds or removes a SkysongItems property on the pivot item.
+ * Adds or removes a SkysongItems trait on the pivot item.
  * <pre>
- *   - type: property
+ *   - type: trait
  *     operation: set | remove
- *     property_id: painted
+ *     trait_id: painted
  * </pre>
- * Setting a property the item already has, or removing one it lacks, is not an error.
+ * Setting a trait the item already has, or removing one it lacks, is not an error.
+ * The legacy spelling {@code type: property} with {@code property_id} reads into this step too.
  * <p>
  * The pivot is a copy nobody holds yet, so the edit goes through SkysongItems' detached view:
- * only the properties list changes (no value tags are set, no lore is redrawn, no event fires).
+ * only the traits list changes (no value tags are set, no lore is redrawn, no event fires).
  */
-public class PropertyStep extends OutputStep {
+public class TraitStep extends OutputStep {
     public enum Operation { SET, REMOVE }
 
     private final Operation operation;
-    private final String propertyId;
+    private final String traitId;
 
-    public PropertyStep(Operation operation, String propertyId) {
+    public TraitStep(Operation operation, String traitId) {
         this.operation = operation;
-        this.propertyId = propertyId;
+        this.traitId = traitId;
     }
 
     @Override
     public String getType() {
-        return "property";
+        return "trait";
     }
 
     @Override
     public StepData execute(StepData stepData) throws OutputException {
-        ItemProperties properties = SkysongApis.items().detached().properties();
-        if (!properties.exists(propertyId)) {
-            throw new OutputException("'" + propertyId + "' is not a property registered in SkysongItems");
+        ItemTraits traits = SkysongApis.items().detached().traits();
+        if (!traits.exists(traitId)) {
+            throw new OutputException("'" + traitId + "' is not a trait registered in SkysongItems");
         }
         ItemStack item = requirePivot(stepData);
         try {
             switch (operation) {
                 case SET:
-                    properties.add(item, propertyId);
+                    traits.add(item, traitId);
                     break;
                 case REMOVE:
-                    properties.remove(item, propertyId);
+                    traits.remove(item, traitId);
                     break;
             }
         } catch (IllegalArgumentException e) {
-            throw new OutputException("SkysongItems refused to change property '" + propertyId + "': " + e.getMessage());
+            throw new OutputException("SkysongItems refused to change trait '" + traitId + "': " + e.getMessage());
         }
         stepData.setPivotItem(item);
         return stepData;

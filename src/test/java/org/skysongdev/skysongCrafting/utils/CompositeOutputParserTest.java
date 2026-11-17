@@ -48,9 +48,9 @@ class CompositeOutputParserTest {
                     operation: add
                     tag_id: layer_count
                     values: ["1"]
-                  - type: property
+                  - type: trait
                     operation: set
-                    property_id: painted
+                    trait_id: painted
                   - type: blend
                     tag_id: dye_color
                     sources: ["marked:1", "marked:2"]
@@ -65,10 +65,40 @@ class CompositeOutputParserTest {
         assertInstanceOf(FetchStep.class, steps.get(0));
         assertInstanceOf(CMDStep.class, steps.get(1));
         assertInstanceOf(TagStep.class, steps.get(2));
-        assertInstanceOf(PropertyStep.class, steps.get(3));
+        assertInstanceOf(TraitStep.class, steps.get(3));
         assertInstanceOf(BlendStep.class, steps.get(4));
         assertInstanceOf(SaveStep.class, steps.get(5));
         assertEquals(2, ((SaveStep) steps.get(5)).getAmount());
+    }
+
+    @Test
+    void legacyPropertyStepStillLoadsAsTraitStep() {
+        CompositeOutput output = parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: property
+                    operation: remove
+                    property_id: painted
+                  - type: save
+                """);
+        assertNotNull(output, warnings.toString());
+        assertInstanceOf(TraitStep.class, output.getSteps().get(1));
+    }
+
+    @Test
+    void traitStepWithoutTraitIdIsRefused() {
+        assertNull(parse("""
+                steps:
+                  - type: fetch
+                    fetch_type: marked
+                    fetch_id: "0"
+                  - type: trait
+                    operation: set
+                  - type: save
+                """));
+        assertTrue(onlyWarning().contains("step 2") && onlyWarning().contains("trait_id"), warnings.toString());
     }
 
     @Test

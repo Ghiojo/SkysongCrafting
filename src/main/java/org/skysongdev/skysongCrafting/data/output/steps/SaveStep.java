@@ -17,7 +17,7 @@ import java.util.Set;
  *     amount: 1
  * </pre>
  * The item is rebuilt by SkysongItems from the data it stores ({@link ItemTemplates#rebuild}), so
- * only SkysongItems data (name, lore, model, properties, registered tags, custom model data) is kept.
+ * only SkysongItems data (name, lore, model, traits, registered tags, custom model data) is kept.
  */
 public class SaveStep extends OutputStep {
     private static final Set<Material> UNSUPPORTED = Set.of(
