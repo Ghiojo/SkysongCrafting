@@ -56,49 +56,45 @@ steps:                             # executed in this order
 | `operation` | `set`, `add` (number tags only), `remove` |
 | `tag_id` | a tag registered in SkysongItems' `config.yml` |
 | `values` | list; number tags **sum** every entry, other tags take the first. Not needed for `remove`. |
+| `duration` / `after` / `every` | optional, see [Timed changes](#timed-changes) |
 
 ### `trait` — add or remove a SkysongItems trait
 | Key | Values |
 |---|---|
 | `operation` | `set`, `remove` |
 | `trait_id` | a trait registered in SkysongItems (`/si trait add` lists them) |
-| `duration` | optional: how long the change lasts, as SkysongItems reads times: a number and a unit (`s`, `m`, `h`, `d`, `w`, `mo`, `y`, or a unit another plugin registered), combinable, such as `30m`, `24h`, `1d12h` |
+| `duration` / `after` / `every` | optional, see [Timed changes](#timed-changes) |
 
 Setting a trait the item already has, or removing one it lacks, does nothing.
-
-Without `duration` the change is for good. With it, the crafted item carries a SkysongItems
-timer, the same one `/si trait add <trait> <time>` makes:
-
-- `set` for a while: the trait is removed once the time has passed. If the item already has the
-  trait **for good**, it keeps it for good (the craft never shortens a trait the item owns); if
-  it has it **for a while**, its time starts again from the craft.
-- `remove` for a while: the trait comes back once the time has passed. If the item didn't have
-  it, nothing happens and nothing comes back later.
-
-The time counts from the craft. Like every SkysongItems timer it runs lazily: the trait goes
-away (or comes back) the next time a player deals with the item once the time has passed.
-A `duration` that isn't a time is refused when the file loads; a unit SkysongItems doesn't know
-refuses the craft (nothing is consumed).
-
-```yaml
-# Honing a blade: the marked sword gets the "honed" trait for one day.
-steps:
-  - type: fetch
-    fetch_type: marked
-    fetch_id: "0"
-  - type: trait
-    operation: set
-    trait_id: honed
-    duration: 24h
-  - type: save
-```
-
-The same works on a fresh item (`fetch_type: generated`), so a plain "make an item" recipe can
-hand out an item with a temporary trait by using a composite output instead of a basic one.
 
 SkysongItems used to call traits "properties". The old spelling, `type: property` with
 `property_id`, still loads as a `trait` step so existing files keep working, but it is legacy:
 use `trait` / `trait_id` in new files.
+
+### `charges` / `hp` — edit the pivot's charges or HP
+| Key | Values |
+|---|---|
+| `operation` | `set` (capped at the max), `add` (a negative amount takes off; stays between 0 and the max), `set_max`, `remove` (takes them off the item; only with `after` / `every`) |
+| `values` | list, all entries summed (placeholders allowed). Not needed for `remove`. |
+| `duration` / `after` / `every` | optional, see [Timed changes](#timed-changes) |
+
+### `transform` — transform the item later
+| Key | Values |
+|---|---|
+| `after` / `every` | required: the item moves to its next SkysongItems transformation once the time has passed (or each time). |
+
+The craft can't transform the item right away: SkysongItems only transforms an item a player
+holds. An item without a transformation is left as it is when the timer comes due.
+
+### `timers` — cancel timers on the pivot
+| Key | Values |
+|---|---|
+| `operation` | `clear` |
+| `action` | optional: only timers with this action: `add_trait`, `remove_trait`, `set_tag`, `add_tag`, `remove_tag`, `set_charges`, `add_charges`, `set_max_charges`, `remove_charges`, `set_hp`, `add_hp`, `set_max_hp`, `remove_hp`, `transform` |
+| `target` | optional: only timers about this tag or trait |
+
+Without `action` and `target`, every timer on the item is cancelled. Use it for crafts such as
+a repair that stops a trait from running out: `action: remove_trait`, `target: honed`.
 
 ### `cmd` — edit the pivot's custom model data
 Custom model data holds four lists: floats, strings, booleans (flags) and colors.
@@ -127,6 +123,84 @@ Writes the mixed colour to the same tag on the pivot.
 
 A template without a `save` step is refused at load time. You may `save` several times
 (e.g. fetch A, save, fetch B, save) to produce more than one item.
+
+## Timed changes
+
+SkysongItems can store **timers** on an item: changes it makes on its own once their time has
+come. The `tag`, `trait`, `charges` and `hp` steps take **one** of these optional keys:
+
+| Key | What the craft does |
+|---|---|
+| *(none)* | makes the change, for good |
+| `duration: 24h` | makes the change, and SkysongItems **undoes it** once the time has passed |
+| `after: 1d` | doesn't change the item; SkysongItems makes the change **once**, after the time |
+| `every: 1mo` | doesn't change the item; SkysongItems makes the change **each time** the time passes |
+
+Times are a number and a unit, combinable: `s`, `m`, `h`, `d`, `w`, `mo`, `y` (`30m`, `24h`,
+`1d12h`), or a unit another plugin registered with SkysongItems. They count from the craft.
+Values and placeholders are read at craft time, also for a change that happens later.
+
+What each combination does, and which SkysongItems can't do:
+
+| Step / operation | `duration` | `after` / `every` |
+|---|---|---|
+| `trait` `set` | trait removed when the time is up ¹ | trait added |
+| `trait` `remove` | trait added back when the time is up ² | trait removed |
+| `tag` `set` | tag **removed** when the time is up (not restored to an earlier value) | tag set to the value |
+| `tag` `add` | the same amount taken back off; these stack | amount added (each time, for `every`) |
+| `tag` `remove` | ✗ refused | tag removed |
+| `charges` / `hp` `add` | the same amount taken back off; these stack | amount added (each time, for `every`) |
+| `charges` / `hp` `set`, `set_max` | ✗ refused | value set |
+| `charges` / `hp` `remove` | ✗ refused | charges / HP taken off |
+| `transform` | ✗ refused | item transforms |
+
+¹ If the item already has the trait **for good**, it keeps it for good: a craft never shortens a
+trait the item owns. If it has it for a while, its time starts again from the craft.
+² If the item didn't have the trait, nothing happens and nothing comes back later.
+
+Like every SkysongItems timer, these run lazily: the change happens the next time a player deals
+with the item after the time has passed. Saved items that already carry timers (`/si saveitem`
+keeps them) bring them along when a craft creates them, nothing to configure.
+
+A key or time that doesn't fit is refused when the file loads, naming the step. A unit
+SkysongItems doesn't know refuses the craft (nothing is consumed).
+
+```yaml
+# Honing a blade: the marked sword gets "honed" for one day, and +2 to its sharpness tag
+# that wears off after the same day.
+steps:
+  - type: fetch
+    fetch_type: marked
+    fetch_id: "0"
+  - type: trait
+    operation: set
+    trait_id: honed
+    duration: 24h
+  - type: tag
+    operation: add
+    tag_id: sharpness
+    values: ["2"]
+    duration: 24h
+  - type: save
+```
+
+```yaml
+# A lantern that refills one charge every day, and ripens into its next form after a week.
+steps:
+  - type: fetch
+    fetch_type: generated
+    fetch_id: lanterns/oil_lantern
+  - type: charges
+    operation: add
+    values: ["1"]
+    every: 1d
+  - type: transform
+    after: 7d
+  - type: save
+```
+
+The same works on a fresh item (`fetch_type: generated`), so a plain "make an item" recipe can
+hand out an item with timers by using a composite output instead of a basic one.
 
 ## Placeholders
 

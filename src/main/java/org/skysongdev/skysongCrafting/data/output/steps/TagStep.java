@@ -7,6 +7,7 @@ import org.skysongdev.skysongCrafting.data.output.utils.PlaceholderParser;
 import org.skysongdev.skysongCrafting.utils.SkysongApis;
 import org.skysongdev.skysongitems.api.ItemTags;
 import org.skysongdev.skysongitems.api.TagType;
+import org.skysongdev.skysongitems.api.TimerChange;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,8 +20,17 @@ import java.util.OptionalInt;
  *     operation: set | add | remove
  *     tag_id: layer_count
  *     values: ["1"]                       # set/add only; numeric tags sum all values, others take the first
+ *     duration: 24h                       # optional, at most one of duration / after / every (see StepTiming)
  * </pre>
- * Values may be placeholders, e.g. {@code "marked:1;tag:dye_color"}.
+ * Values may be placeholders, e.g. {@code "marked:1;tag:dye_color"}; they are read at craft time,
+ * also for a change that happens later.
+ * <ul>
+ *     <li>{@code duration}: {@code set} sets the tag and SkysongItems removes it once the time has
+ *     passed (it is not restored to an earlier value); {@code add} adds the amount and takes the
+ *     same amount back off later. Not available for {@code remove}.</li>
+ *     <li>{@code after} / {@code every}: the craft doesn't change the tag; SkysongItems sets, adds to
+ *     or removes it once the time has passed, or each time it passes.</li>
+ * </ul>
  * <p>
  * The pivot is a copy nobody holds yet, so the edit goes through SkysongItems' detached view:
  * the value is stored, no lore is redrawn and no event fires.
@@ -31,11 +41,24 @@ public class TagStep extends OutputStep {
     private final Operation operation;
     private final String tagId;
     private final List<String> values;
+    private final StepTiming timing;
 
     public TagStep(Operation operation, String tagId, List<String> values) {
+        this(operation, tagId, values, StepTiming.NOW);
+    }
+
+    public TagStep(Operation operation, String tagId, List<String> values, StepTiming timing) {
+        if (operation == Operation.REMOVE && timing.kind() == StepTiming.Kind.FOR) {
+            throw new IllegalArgumentException("'remove' on a tag can't take a duration");
+        }
         this.operation = operation;
         this.tagId = tagId;
         this.values = values;
+        this.timing = timing;
+    }
+
+    public StepTiming getTiming() {
+        return timing;
     }
 
     @Override
@@ -52,6 +75,15 @@ public class TagStep extends OutputStep {
         }
         TagType type = foundType.get();
         ItemStack item = requirePivot(stepData);
+
+        if (operation == Operation.ADD && type != TagType.INT && type != TagType.FLOAT) {
+            throw new OutputException("'add' only works on number tags; '" + tagId + "' is not a number tag (use 'set')");
+        }
+        if (timing.kind() != StepTiming.Kind.NOW) {
+            applyTimed(tags, type, item, stepData);
+            stepData.setPivotItem(item);
+            return stepData;
+        }
 
         try {
             switch (operation) {
@@ -84,6 +116,30 @@ public class TagStep extends OutputStep {
         }
         stepData.setPivotItem(item);
         return stepData;
+    }
+
+    /** The change for a while, later or on a repeat; the values are read now, at craft time. */
+    private void applyTimed(ItemTags tags, TagType type, ItemStack item, StepData stepData) throws OutputException {
+        try {
+            if (timing.isScheduled()) {
+                TimerChange change = switch (operation) {
+                    case SET -> TimerChange.setTag(tagId, resolveValue(type, stepData));
+                    case ADD -> TimerChange.addToTag(tagId, (Number) resolveValue(type, stepData));
+                    case REMOVE -> TimerChange.removeTag(tagId);
+                };
+                schedule(item, change, timing);
+                return;
+            }
+            switch (operation) {
+                case SET -> tags.setFor(item, tagId, resolveValue(type, stepData), timing.time());
+                case ADD -> tags.addFor(item, tagId, (Number) resolveValue(type, stepData), timing.time());
+                case REMOVE -> throw new OutputException("'remove' on a tag can't take a duration");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new OutputException("SkysongItems refused to change '" + tagId + "' " + timing.describe() + ": " + e.getMessage());
+        } catch (AbstractMethodError | NoSuchMethodError e) {
+            throw newerSkysongItemsNeeded();
+        }
     }
 
     /** Converts the configured values into the tag's own type. */

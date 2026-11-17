@@ -92,7 +92,11 @@ public final class CompositeOutputParser {
                 if (op != TagStep.Operation.REMOVE && values.isEmpty()) {
                     throw new ParseException("'" + op.name().toLowerCase() + "' needs a 'values' list");
                 }
-                return new TagStep(op, tagId, values);
+                StepTiming timing = readTiming(raw);
+                if (op == TagStep.Operation.REMOVE && timing.kind() == StepTiming.Kind.FOR) {
+                    throw new ParseException("'remove' on a tag can't take a 'duration' (use after or every)");
+                }
+                return new TagStep(op, tagId, values, timing);
             }
             case "trait":
             case "property": { // 'property' / 'property_id': the names from before SkysongItems renamed properties to traits
@@ -100,11 +104,32 @@ public final class CompositeOutputParser {
                 String traitId = optionalString(raw, "trait_id");
                 if (traitId == null) traitId = optionalString(raw, "property_id");
                 if (traitId == null) throw new ParseException("missing 'trait_id'");
-                String duration = optionalString(raw, "duration");
-                if (duration != null && !DURATION.matcher(duration).matches()) {
-                    throw new ParseException("'duration' must be a time such as 30m, 24h, 7d or 1d12h, got '" + duration + "'");
+                return new TraitStep(op, traitId, readTiming(raw));
+            }
+            case "charges":
+            case "hp": {
+                MeterStep.Meter meter = type.equals("hp") ? MeterStep.Meter.HP : MeterStep.Meter.CHARGES;
+                MeterStep.Operation op = requireEnum(raw, "operation", MeterStep.Operation.class);
+                List<String> values = stringList(raw, "values");
+                if (op != MeterStep.Operation.REMOVE && values.isEmpty()) {
+                    throw new ParseException("'" + op.name().toLowerCase() + "' needs a 'values' list");
                 }
-                return new TraitStep(op, traitId, duration);
+                StepTiming timing = readTiming(raw);
+                if (!MeterStep.allows(op, timing.kind())) {
+                    throw new ParseException(MeterStep.describeAllowed(op));
+                }
+                return new MeterStep(meter, op, values, timing);
+            }
+            case "transform": {
+                StepTiming timing = readTiming(raw);
+                if (!timing.isScheduled()) {
+                    throw new ParseException("'transform' needs 'after' or 'every'");
+                }
+                return new TransformStep(timing);
+            }
+            case "timers": {
+                requireEnum(raw, "operation", TimersStep.Operation.class);
+                return new TimersStep(optionalString(raw, "action"), optionalString(raw, "target"));
             }
             case "cmd": {
                 CMDStep.CmdType cmdType = requireEnum(raw, "cmd_type", CMDStep.CmdType.class);
@@ -141,8 +166,27 @@ public final class CompositeOutputParser {
                 return new SaveStep(amount);
             }
             default:
-                throw new ParseException("unknown step type '" + type + "' (expected fetch, tag, trait, cmd, blend or save)");
+                throw new ParseException("unknown step type '" + type + "' (expected fetch, tag, trait, charges, hp, transform, timers, cmd, blend or save)");
         }
+    }
+
+    /**
+     * Reads a step's optional {@code duration}, {@code after} or {@code every}; at most one may be given.
+     */
+    private static StepTiming readTiming(Map<?, ?> raw) throws ParseException {
+        StepTiming timing = StepTiming.NOW;
+        for (StepTiming.Kind kind : new StepTiming.Kind[]{StepTiming.Kind.FOR, StepTiming.Kind.AFTER, StepTiming.Kind.EVERY}) {
+            String time = optionalString(raw, kind.key());
+            if (time == null) continue;
+            if (timing.kind() != StepTiming.Kind.NOW) {
+                throw new ParseException("use only one of 'duration', 'after' and 'every'");
+            }
+            if (!DURATION.matcher(time).matches()) {
+                throw new ParseException("'" + kind.key() + "' must be a time such as 30m, 24h, 7d or 1d12h, got '" + time + "'");
+            }
+            timing = new StepTiming(kind, time);
+        }
+        return timing;
     }
 
     // ---- field helpers ----
