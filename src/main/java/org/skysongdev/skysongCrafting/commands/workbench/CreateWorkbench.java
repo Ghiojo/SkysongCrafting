@@ -9,6 +9,8 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.api.WorkstationCreateEvent;
+import org.skysongdev.skysongCrafting.api.WorkstationRemoveEvent;
 import org.skysongdev.skysongCrafting.data.workstations.Workstation;
 import org.skysongdev.skysongCrafting.data.workstations.WorkstationReference;
 import org.skysongdev.skysongCrafting.utils.Utils;
@@ -63,8 +65,14 @@ public class CreateWorkbench implements TabExecutor {
         }
 
         ArrayList<WorkstationReference> existingRefs = Utils.getWorkstationReferences().get(location);
+        WorkstationReference replaced = Utils.Instance().getWorkstationReferenceByWorld(existingRefs, reference.getWorldName());
         existingRefs = Utils.Instance().addOrReplaceWorkstationReference(existingRefs, reference);
         Utils.getWorkstationReferences().put(location, existingRefs);
+
+        if(replaced != null){
+            Bukkit.getPluginManager().callEvent(new WorkstationRemoveEvent(replaced.toInfo(), WorkstationRemoveEvent.Cause.REPLACED));
+        }
+        Bukkit.getPluginManager().callEvent(new WorkstationCreateEvent(reference.toInfo()));
 
         sender.sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<green>Successfully created a " + workstationType.getType() + " workbench for " + target.getName() + "!"));
         return true;

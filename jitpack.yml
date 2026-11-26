@@ -1,0 +1,7 @@
+# JitPack builds SkysongCrafting from a git tag so other plugins can compile against its api package:
+#   repositories { maven { url 'https://jitpack.io' } }
+#   dependencies { compileOnly 'com.github.Ghiojo:SkysongCrafting:<tag>' }
+jdk:
+  - openjdk21
+install:
+  - ./gradlew publishToMavenLocal -x test --no-daemon

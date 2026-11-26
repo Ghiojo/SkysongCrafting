@@ -1,11 +1,13 @@
 package org.skysongdev.skysongCrafting.commands.workbench;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.api.WorkstationRemoveEvent;
 import org.skysongdev.skysongCrafting.data.workstations.WorkstationReference;
 import org.skysongdev.skysongCrafting.utils.Utils;
 
@@ -38,6 +40,7 @@ public class DeleteWorkbench implements CommandExecutor {
             return true;
         }
 
+        Bukkit.getPluginManager().callEvent(new WorkstationRemoveEvent(ref.toInfo(), WorkstationRemoveEvent.Cause.DELETED));
         sender.sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<green>Workbench deleted successfully."));
 
         return true;

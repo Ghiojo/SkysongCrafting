@@ -37,6 +37,27 @@ SkysongCrafting compiles against the public APIs of SkysongItems and SkysongStat
 publishes from their repositories (`com.github.Ghiojo:Skysong-Special-Items:1.0.1`,
 `com.github.Ghiojo:SkysongStats:1.0.0`). The output jar is in `build/libs/`.
 
+## Public API
+
+Other plugins can read workstations and react to them. Only `org.skysongdev.skysongCrafting.api` is public API.
+
+```groovy
+repositories { maven { url 'https://jitpack.io' } }
+dependencies { compileOnly 'com.github.Ghiojo:SkysongCrafting:<tag>' }
+```
+
+Add `SkysongCrafting` to `depend` or `softdepend` in your `plugin.yml`.
+
+| Type | What it does |
+|---|---|
+| `Workstations` | Service (`Bukkit.getServicesManager().load(Workstations.class)`): `at(block)` / `at(world, x, y, z)` and `all()`. Read-only, main thread, returns copies |
+| `WorkstationInfo` | A workstation at the moment it was read: block (world, x, y, z), type id and name, owner, members, public flag, `canUse(uuid)` |
+| `WorkstationCreateEvent` | After `/sc workbench create` saved a workstation |
+| `WorkstationRemoveEvent` | After a workstation was removed; `getCause()` is `DELETED` (`/sc workbench delete`), `BROKEN` or `REPLACED` (a new one was created on its block; the create event follows) |
+| `WorkstationAccessEvent` | A player who isn't owner, member or bypassing tried to open a private workstation; `setAllowed(true)` lets them in |
+
+A workstation is identified by its block. Events fire on the main thread and can't be cancelled.
+
 ## Commands
 
 `/sc` (aliases `/skysongcrafting`, `/scraft`, `/skyc`)

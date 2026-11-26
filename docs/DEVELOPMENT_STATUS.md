@@ -152,6 +152,18 @@ Branch: `claude/project-thread-ke9f9b`, two commits (refactor, then feature).
 - Checks: composite engine + parser compiled against the SkysongItems 1.2.0 api sources with Bukkit
   stubs (no deprecation warnings from SkysongCrafting code); `CompositeOutputParserTest` 22/22.
 
+## Milestone 6 — Public workstation API (2026-11-26; awaiting owner review)
+
+Branch: `feature/workstation-api`. Asked for so SkysongEconomy can tie workstations to businesses.
+
+- New `api` package (the only public API): `Workstations` service registered on enable, `WorkstationInfo`
+  record, `WorkstationCreateEvent`, `WorkstationRemoveEvent` (`DELETED`, `BROKEN`, `REPLACED`) and
+  `WorkstationAccessEvent` (asked only when SkysongCrafting would refuse a private workstation; listeners can
+  only add access).
+- `WorkstationReference.toInfo()` makes the copies; `WorkstationService` reads the in-memory map.
+- `maven-publish` + `jitpack.yml` (JDK 21) so JitPack serves `com.github.Ghiojo:SkysongCrafting:<tag>`.
+- Tests: `WorkstationInfoTest`, `WorkstationEventsTest`. Full build passes (59 tests).
+
 ## Later / optional
 - Shapeless conditional recipes already covered (conditions work on any recipe type).
 - Composite steps for name/lore editing, if wanted.
