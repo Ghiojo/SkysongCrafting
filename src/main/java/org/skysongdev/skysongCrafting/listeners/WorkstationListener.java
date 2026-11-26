@@ -1,12 +1,16 @@
 package org.skysongdev.skysongCrafting.listeners;
 
+import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.api.WorkstationAccessEvent;
+import org.skysongdev.skysongCrafting.api.WorkstationRemoveEvent;
 import org.skysongdev.skysongCrafting.data.workstations.WorkstationReference;
 import org.skysongdev.skysongCrafting.utils.Utils;
 
@@ -36,7 +40,8 @@ public class WorkstationListener implements Listener {
         if(!reference.isPublic()
                 && !isOwner
                 && !reference.getAuthorizedUsers().contains(event.getPlayer().getUniqueId())
-                && !event.getPlayer().hasPermission("skysongcrafting.workstation.use.bypass")) {
+                && !event.getPlayer().hasPermission("skysongcrafting.workstation.use.bypass")
+                && !allowedByOtherPlugins(event.getPlayer(), reference)) {
             event.getPlayer().sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<red>You do not have permission to use this workstation."));
             return;
         }
@@ -74,6 +79,14 @@ public class WorkstationListener implements Listener {
         } else {
             Utils.getWorkstationReferences().put(coords, remaining);
         }
+        Bukkit.getPluginManager().callEvent(new WorkstationRemoveEvent(reference.toInfo(), WorkstationRemoveEvent.Cause.BROKEN));
         event.getPlayer().sendMessage(SkysongCrafting.GetMM().deserialize(PLUGIN_TAG + "<green>Workstation removed successfully."));
+    }
+
+    /** Asks other plugins, through {@link WorkstationAccessEvent}, whether they let the player in. */
+    private boolean allowedByOtherPlugins(Player player, WorkstationReference reference) {
+        WorkstationAccessEvent access = new WorkstationAccessEvent(player, reference.toInfo());
+        Bukkit.getPluginManager().callEvent(access);
+        return access.isAllowed();
     }
 }

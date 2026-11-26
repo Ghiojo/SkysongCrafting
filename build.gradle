@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    // JitPack publishes the jar so other plugins can compile against the public api package.
+    id 'maven-publish'
 }
 
 group = 'org.skysongdev'
@@ -69,5 +71,15 @@ processResources {
     filteringCharset 'UTF-8'
     filesMatching('plugin.yml') {
         expand props
+    }
+}
+
+// JitPack runs publishToMavenLocal (jitpack.yml) and serves the result as
+// com.github.Ghiojo:SkysongCrafting:<tag>. Only org.skysongdev.skysongCrafting.api is public API.
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
     }
 }

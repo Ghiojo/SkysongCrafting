@@ -2,9 +2,12 @@ package org.skysongdev.skysongCrafting;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.skysongdev.skysongCrafting.api.Workstations;
 import org.skysongdev.skysongCrafting.commands.SkysongCraftingCommand;
 import org.skysongdev.skysongCrafting.data.database.Database;
+import org.skysongdev.skysongCrafting.data.workstations.WorkstationService;
 import org.skysongdev.skysongCrafting.listeners.GUIListener;
 import org.skysongdev.skysongCrafting.listeners.RandomIdListener;
 import org.skysongdev.skysongCrafting.listeners.SkysongItemsRegistrationListener;
@@ -70,6 +73,7 @@ public final class SkysongCrafting extends JavaPlugin {
             Bukkit.getLogger().warning("[SkysongCrafting] Unable to load workstations from database!");
             e.printStackTrace();
         }
+        getServer().getServicesManager().register(Workstations.class, new WorkstationService(), this, ServicePriority.Normal);
 
         getLogger().info("Loaded " + Utils.Instance().getWorkstationTypes().size() + " workstation type(s), "
                 + Utils.getWorkstationReferences().size() + " placed workstation(s), "

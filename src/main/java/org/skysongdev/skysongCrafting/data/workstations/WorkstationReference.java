@@ -1,5 +1,7 @@
 package org.skysongdev.skysongCrafting.data.workstations;
 
+import org.skysongdev.skysongCrafting.api.WorkstationInfo;
+
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -65,5 +67,11 @@ public class WorkstationReference {
             sb.setLength(sb.length() - 1); // Remove trailing semicolon
         }
         return sb.toString();
+    }
+
+    /** @return a copy of this workstation for the public API */
+    public WorkstationInfo toInfo() {
+        return new WorkstationInfo(worldName, location.get(0), location.get(1), location.get(2),
+                workstation.getId(), workstation.getType(), ownerID, authorizedUsers, isPublic);
     }
 }
