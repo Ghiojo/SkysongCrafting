@@ -11,11 +11,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.api.CraftFinishedEvent;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.item.ResultItem;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import org.skysongdev.skysongCrafting.data.recipe.SkillRequirement;
+import org.skysongdev.skysongCrafting.data.workstations.WorkstationReference;
 import org.skysongdev.skysongCrafting.events.CraftingEvent;
 import org.skysongdev.skysongCrafting.utils.GUIUtils;
 import org.skysongdev.skysongCrafting.utils.SkysongApis;
@@ -40,6 +42,8 @@ public abstract class AbstractWorkbench implements InventoryHolder {
     protected int craftingButtonLocation;
     protected ItemStack icon;
     protected String name;
+    /** The placed workstation this GUI belongs to; null for the type templates loaded from workstations.yml. */
+    protected WorkstationReference reference;
 
     public WorkbenchGUIType getGuiType() {
         return guiType;
@@ -54,6 +58,11 @@ public abstract class AbstractWorkbench implements InventoryHolder {
         this.recipeIndex = 0;
         this.type = type;
     }
+    /** Ties this GUI to the placed workstation that owns it, so crafts can say where they were made. */
+    public void setReference(WorkstationReference reference){
+        this.reference = reference;
+    }
+
     public void NextRecipe(Player player){
         if(foundRecipes.isEmpty())
             return;
@@ -133,7 +142,8 @@ public abstract class AbstractWorkbench implements InventoryHolder {
     /**
      * Crafting order, chosen so a failure can never cost or duplicate items:
      * 1. copy the marked inputs; 2. run the output on the copies; 3. generate every result stack;
-     * 4. only then consume the materials; 5. place the results.
+     * 4. only then consume the materials; 5. place the results; 6. announce the finished craft
+     * ({@link CraftFinishedEvent}, the public API event).
      * Steps 1-3 touch nothing in the grid, so if any of them fails the craft is refused and the grid is untouched.
      */
     public void CraftItem(Player player){
@@ -169,6 +179,15 @@ public abstract class AbstractWorkbench implements InventoryHolder {
         }
 
         Bukkit.getPluginManager().callEvent(new CraftingEvent(recipe, results, inputSlotReferences, outputSlotReferences, player, inventory));
+        // Copied before consuming: the public event reports the ingredients as they were.
+        List<ItemStack> ingredients = new ArrayList<>();
+        for(int slot : inputSlotReferences){
+            ItemStack item = inventory.getItem(slot);
+            if(item != null && !item.getType().isAir()) ingredients.add(item.clone());
+        }
+        // Copied before placing: a placed stack can merge into one already in an output slot.
+        List<ItemStack> madeResults = new ArrayList<>();
+        for(ItemStack result : results) madeResults.add(result.clone());
         recipe.ConsumeMaterials(inputSlotReferences, inventory);
 
         for(ItemStack newItem : results){
@@ -189,6 +208,10 @@ public abstract class AbstractWorkbench implements InventoryHolder {
             if(!added){
                 player.getInventory().addItem(newItem);
             }
+        }
+
+        if(reference != null){
+            Bukkit.getPluginManager().callEvent(new CraftFinishedEvent(player, reference.toInfo(), recipe.toInfo(), madeResults, ingredients));
         }
 
         String soundName = recipe.getCraftingSound();

@@ -164,6 +164,23 @@ Branch: `feature/workstation-api`. Asked for so SkysongEconomy can tie workstati
 - `maven-publish` + `jitpack.yml` (JDK 21) so JitPack serves `com.github.Ghiojo:SkysongCrafting:<tag>`.
 - Tests: `WorkstationInfoTest`, `WorkstationEventsTest`. Full build passes (59 tests).
 
+## Milestone 7 — API module and craft finished event (2026-11-27; awaiting owner build and test)
+
+Branch: `claude/project-thread-tmxaj7`. Asked for so Inspectors can react to finished crafts.
+
+- The `api` package moved into its own Gradle module `api/`, laid out like SkysongItems' api module:
+  JitPack publishes only it as `com.github.Ghiojo.SkysongCrafting:api:<tag>` (was the whole plugin as
+  `com.github.Ghiojo:SkysongCrafting:<tag>`); the plugin jar still contains its classes. Package and class
+  names unchanged.
+- `SkysongCraftingApi.get()` entry point (`apiVersion()` = 1.1.0, `workstations()`), implemented by
+  `apiimpl.SkysongCraftingApiImpl`. `Workstations` stays registered on its own too.
+- `CraftFinishedEvent` (player, `WorkstationInfo`, `RecipeInfo`, results, ingredients; all copies), fired at
+  the end of `CraftItem` after consume + place. `RecipeInfo.id` = recipe file path under `recipes/` without
+  extension (`YamlParsingUtils.recipeId`). Each placed workstation's GUI now knows its `WorkstationReference`.
+- `events.CraftingEvent` / `RandomIdListener` unchanged; `CraftingEvent` documented as internal.
+- Checks: api module compiled against Bukkit stubs; `CraftFinishedEventTest` and `RecipeIdTest` pass (5/5).
+  Plugin code not compiled here (Paper API and JitPack unreachable from the assistant's environment).
+
 ## Later / optional
 - Shapeless conditional recipes already covered (conditions work on any recipe type).
 - Composite steps for name/lore editing, if wanted.

@@ -11,6 +11,9 @@ import org.skysongdev.skysongCrafting.data.recipe.RecipeInstance;
 import java.util.List;
 
 /**
+ * Internal, not part of the public API: other plugins should listen to
+ * {@link org.skysongdev.skysongCrafting.api.CraftFinishedEvent} instead.
+ * <p>
  * Fired once a recipe's output has been produced, before the ingredients are consumed and before
  * the results are placed. {@link #getResults()} holds the exact stacks that will be placed, so
  * listeners can edit them in place (the random-id listener does this).

@@ -9,6 +9,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.skysongdev.skysongCrafting.SkysongCrafting;
+import org.skysongdev.skysongCrafting.api.RecipeInfo;
 import org.skysongdev.skysongCrafting.data.MarkedItem;
 import org.skysongdev.skysongCrafting.data.output.OutputException;
 import org.skysongdev.skysongCrafting.data.output.OutputInstance;
@@ -31,6 +32,9 @@ public abstract class RecipeInstance {
     protected String craftingTableType;
     protected String craftingSound;
     protected List<RecipeCondition> conditions = new ArrayList<>();
+    protected String name;
+    /** The recipe file's path under recipes/, without extension; see {@link #toInfo()}. */
+    protected String id = "";
 
     public String getCraftingSound() {
         return craftingSound;
@@ -38,6 +42,7 @@ public abstract class RecipeInstance {
 
     public RecipeInstance(OutputInstance output, Material displayItem, String recipeName, String craftingTableType, String craftingSound, List<SkillRequirement> skillRequirements) {
         this.results = output;
+        this.name = recipeName;
         ItemStack buffer = new ItemStack(displayItem);
         ItemMeta metaBuffer = buffer.getItemMeta();
         PersistentDataContainer metaDataContainer = metaBuffer.getPersistentDataContainer();
@@ -53,6 +58,19 @@ public abstract class RecipeInstance {
         this.skillRequirements = skillRequirements;
         this.craftingTableType = craftingTableType;
         this.craftingSound = craftingSound.toLowerCase();
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    /** @return this recipe for the public API */
+    public RecipeInfo toInfo() {
+        return new RecipeInfo(id, name, craftingTableType);
     }
 
     public ItemStack getDisplayItem() {

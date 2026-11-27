@@ -25,6 +25,8 @@ public class WorkstationReference {
         this.isPublic = isPublic;
         this.location = location;
         this.worldName = worldName;
+        // Each placed workstation has its own GUI; it needs to know which workstation it is for the craft event.
+        if(this.workstation.getGui() != null) this.workstation.getGui().setReference(this);
     }
 
     public void setAuthorizedUsers(ArrayList<UUID> authorizedUsers) {

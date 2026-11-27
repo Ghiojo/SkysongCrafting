@@ -13,6 +13,7 @@ import org.skysongdev.skysongCrafting.data.workstations.Workstation;
 import org.skysongdev.skysongstats.api.Skills;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -211,6 +212,7 @@ public class YamlParsingUtils {
                     : new ShapedMarkingRecipeInstance(output, icon, name, tableType, sound, key, skillRequirements, markingPattern);
             recipe.setSlotRules(slotRules);
             recipe.setConditions(conditions);
+            recipe.setId(recipeId(RECIPES_PATH, file.toPath()));
             Instance().getShapedRecipeMap().computeIfAbsent(key, k -> new ArrayList<>()).add(recipe);
         }
     }
@@ -237,8 +239,24 @@ public class YamlParsingUtils {
                     : new ShapelessMarkingRecipeInstance(materialCounts, output, icon, name, tableType, sound, skillRequirements, markingPattern);
             recipe.setRulesById(rulesById);
             recipe.setConditions(conditions);
+            recipe.setId(recipeId(RECIPES_PATH, file.toPath()));
             Instance().getShapelessRecipeMap().computeIfAbsent(materialCounts, k -> new ArrayList<>()).add(recipe);
         }
+    }
+
+    /**
+     * The recipe's public id: its file's path under the recipes folder, '/'-joined, without the
+     * .yml/.yaml extension, such as {@code shaped/iron_sword}.
+     */
+    static String recipeId(Path recipesRoot, Path file){
+        Path relative = recipesRoot.toAbsolutePath().normalize().relativize(file.toAbsolutePath().normalize());
+        StringJoiner id = new StringJoiner("/");
+        for(Path part : relative) id.add(part.toString());
+        String joined = id.toString();
+        String lower = joined.toLowerCase(Locale.ROOT);
+        if(lower.endsWith(".yml")) return joined.substring(0, joined.length() - 4);
+        if(lower.endsWith(".yaml")) return joined.substring(0, joined.length() - 5);
+        return joined;
     }
 
     /** One {@link ConsumptionRule} per ingredient token, in order. */
