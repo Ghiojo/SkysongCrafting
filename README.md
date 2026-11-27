@@ -39,24 +39,43 @@ publishes from their repositories (`com.github.Ghiojo:Skysong-Special-Items:1.0.
 
 ## Public API
 
-Other plugins can read workstations and react to them. Only `org.skysongdev.skysongCrafting.api` is public API.
+Other plugins can read workstations and react to crafts and workstations. Only
+`org.skysongdev.skysongCrafting.api` is public API; it lives in the `api/` module, which JitPack
+publishes on its own (like SkysongItems' api module). Its classes also ship inside the plugin jar.
 
 ```groovy
 repositories { maven { url 'https://jitpack.io' } }
-dependencies { compileOnly 'com.github.Ghiojo:SkysongCrafting:<tag>' }
+dependencies { compileOnly 'com.github.Ghiojo.SkysongCrafting:api:<tag>' }
 ```
 
-Add `SkysongCrafting` to `depend` or `softdepend` in your `plugin.yml`.
+Add `SkysongCrafting` to `depend` or `softdepend` in your `plugin.yml`, then:
+
+```java
+SkysongCraftingApi crafting = SkysongCraftingApi.get();   // apiVersion(), workstations()
+
+@EventHandler
+public void onCraft(CraftFinishedEvent event) {
+    Player player = event.getPlayer();
+    String recipeId = event.getRecipe().id();             // e.g. "shaped/iron_sword"
+    WorkstationInfo bench = event.getWorkstation();       // block, type, owner, members
+    List<ItemStack> made = event.getResults();
+}
+```
 
 | Type | What it does |
 |---|---|
-| `Workstations` | Service (`Bukkit.getServicesManager().load(Workstations.class)`): `at(block)` / `at(world, x, y, z)` and `all()`. Read-only, main thread, returns copies |
+| `SkysongCraftingApi` | Entry point: `SkysongCraftingApi.get()`, `apiVersion()` (`1.1.0`), `workstations()` |
+| `CraftFinishedEvent` | A craft finished: after the ingredients were consumed and the results placed. Player, `WorkstationInfo`, `RecipeInfo`, results, ingredients (copies as they were before the craft). Not fired for refused crafts |
+| `RecipeInfo` | A recipe: `id` (its file's path under `recipes/` without extension, e.g. `shaped/iron_sword`), `name` (MiniMessage), `tableType` |
+| `Workstations` | Read placed workstations: `at(block)` / `at(world, x, y, z)` and `all()`. Read-only, main thread, returns copies. Also registered on its own with the services manager (API 1.0.0) |
 | `WorkstationInfo` | A workstation at the moment it was read: block (world, x, y, z), type id and name, owner, members, public flag, `canUse(uuid)` |
 | `WorkstationCreateEvent` | After `/sc workbench create` saved a workstation |
 | `WorkstationRemoveEvent` | After a workstation was removed; `getCause()` is `DELETED` (`/sc workbench delete`), `BROKEN` or `REPLACED` (a new one was created on its block; the create event follows) |
 | `WorkstationAccessEvent` | A player who isn't owner, member or bypassing tried to open a private workstation; `setAllowed(true)` lets them in |
 
 A workstation is identified by its block. Events fire on the main thread and can't be cancelled.
+`events.CraftingEvent` is internal (it fires before the ingredients are used, so results can be
+edited) and can change without notice; use `CraftFinishedEvent`.
 
 ## Commands
 
