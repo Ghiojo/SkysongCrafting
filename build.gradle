@@ -1,8 +1,9 @@
 plugins {
     id 'java'
-    // JitPack publishes the jar so other plugins can compile against the public api package.
-    id 'maven-publish'
 }
+
+// The api module is configured first so its classes can be added to the plugin jar below.
+evaluationDependsOn(':api')
 
 group = 'org.skysongdev'
 version = '1.0'
@@ -29,6 +30,8 @@ repositories {
 }
 
 dependencies {
+    // The public API (api/), published on its own by JitPack. Its classes ship inside this jar.
+    implementation project(':api')
     compileOnly "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
     // Only the public APIs: both plugins are installed on the server (plugin.yml depend).
     compileOnly "com.github.Ghiojo:Skysong-Special-Items:1.2.0"
@@ -74,12 +77,8 @@ processResources {
     }
 }
 
-// JitPack runs publishToMavenLocal (jitpack.yml) and serves the result as
-// com.github.Ghiojo:SkysongCrafting:<tag>. Only org.skysongdev.skysongCrafting.api is public API.
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
+// The api classes ship inside the plugin jar, so the server has exactly one copy of them.
+// Plugins that use the API compile against it with compileOnly and never shade it.
+tasks.named('jar') {
+    from(project(':api').sourceSets.main.output)
 }
